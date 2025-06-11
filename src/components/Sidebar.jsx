@@ -14,8 +14,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { state, dispatch } = useDeFi();
 
   const menuItems = [
-    { icon: BarChart3, label: 'Dashboard', page: 'dashboard', color: 'from-blue-500 to-cyan-500' },
-    { icon: TrendingUp, label: 'Smart Funds', page: 'funds', color: 'from-purple-500 to-pink-500' },
+    { icon: BarChart3, label: 'Main', page: 'dashboard', color: 'from-blue-500 to-cyan-500' },
+    { icon: TrendingUp, label: 'Funds Filter', page: 'funds', color: 'from-purple-500 to-pink-500' },
     { icon: Users, label: 'Users', page: 'users', color: 'from-green-500 to-emerald-500' },
     { icon: Activity, label: 'Transactions', page: 'transactions', color: 'from-orange-500 to-red-500' },
     { icon: PieChart, label: 'Analytics', page: 'analytics', color: 'from-indigo-500 to-purple-500' },

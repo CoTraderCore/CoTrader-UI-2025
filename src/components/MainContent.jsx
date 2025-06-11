@@ -12,7 +12,7 @@ const MainContent = () => {
   const renderPage = () => {
     switch (state.currentPage) {
       case 'dashboard':
-        return <SmartFundList />;
+        return <Dashboard />;
       case 'funds':
         return <SmartFundList />;
       case 'fund-details':
