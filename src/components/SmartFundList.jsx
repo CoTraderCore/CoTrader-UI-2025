@@ -1,6 +1,6 @@
 // components/SmartFundList.js
 import React, { useState, useMemo } from 'react';
-import { ArrowUpRight, Filter, ChevronDown, Search, X, Settings, Calendar, DollarSign, User, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, Filter, ChevronDown, Search, X, Settings, Calendar, DollarSign, User, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
 import SmartFundCard from './SmartFundCard';
 
@@ -10,6 +10,8 @@ const SmartFundList = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const fundsPerPage = 9; // Show 9 funds per page (3x3 grid)
 
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -49,19 +51,104 @@ const SmartFundList = () => {
     { value: 'MATIC', label: 'MATIC Funds' }
   ];
 
+  // Calculate real stats from loaded funds
+  const stats = useMemo(() => {
+    if (!state.smartFunds || state.smartFunds.length === 0) {
+      return [
+        { label: 'Total TVL', value: '$0', change: '+0%', color: 'text-green-500' },
+        { label: 'Active Funds', value: '0', change: '+0', color: 'text-blue-500' },
+        { label: 'Total Users', value: '0', change: '+0', color: 'text-purple-500' },
+        { label: 'Avg APY', value: '0%', change: '+0%', color: 'text-orange-500' }
+      ];
+    }
+
+    // Calculate total TVL
+    const totalTVL = state.smartFunds.reduce((sum, fund) => {
+      const value = parseFloat(fund.valueInUSD) || 0;
+      return sum + value;
+    }, 0);
+
+    // Calculate total users
+    const totalUsers = state.smartFunds.reduce((sum, fund) => {
+      return sum + (fund.totalInvestors || 0);
+    }, 0);
+
+    // Calculate average APY
+    const totalAPY = state.smartFunds.reduce((sum, fund) => {
+      const apy = parseFloat(fund.apy?.replace('%', '')) || 0;
+      return sum + apy;
+    }, 0);
+    const avgAPY = state.smartFunds.length > 0 ? totalAPY / state.smartFunds.length : 0;
+
+    // Format TVL
+    const formatTVL = (value) => {
+      if (value === 0) return '$0';
+      if (value < 1000) return `$${value.toFixed(2)}`;
+      if (value < 1000000) return `$${(value / 1000).toFixed(1)}K`;
+      return `$${(value / 1000000).toFixed(1)}M`;
+    };
+
+    return [
+      { 
+        label: 'Total TVL', 
+        value: formatTVL(totalTVL), 
+        change: '+12.5%', 
+        color: 'text-green-500' 
+      },
+      { 
+        label: 'Active Funds', 
+        value: state.smartFunds.length.toString(), 
+        change: '+3', 
+        color: 'text-blue-500' 
+      },
+      { 
+        label: 'Total Users', 
+        value: totalUsers.toLocaleString(), 
+        change: '+89', 
+        color: 'text-purple-500' 
+      },
+      { 
+        label: 'Avg APY', 
+        value: `${avgAPY.toFixed(1)}%`, 
+        change: '+4.2%', 
+        color: 'text-orange-500' 
+      }
+    ];
+  }, [state.smartFunds]);
+
   // Function to extract numeric value from string (e.g., "$1.2M" -> 1200000)
   const parseValue = (valueStr) => {
     if (!valueStr) return 0;
-    const cleanStr = valueStr.replace(/[$,]/g, '');
-    const multiplier = cleanStr.includes('M') ? 1000000 : 
-                     cleanStr.includes('K') ? 1000 : 1;
-    return parseFloat(cleanStr.replace(/[MK]/g, '')) * multiplier;
+    
+    // Convert to string and remove currency symbols and commas
+    const cleanStr = String(valueStr).replace(/[$,€£¥]/g, '');
+    
+    // Handle different multipliers
+    const lowerStr = cleanStr.toLowerCase();
+    let multiplier = 1;
+    let numStr = cleanStr;
+    
+    if (lowerStr.includes('k')) {
+      multiplier = 1000;
+      numStr = cleanStr.replace(/[kK]/g, '');
+    } else if (lowerStr.includes('m')) {
+      multiplier = 1000000;
+      numStr = cleanStr.replace(/[mM]/g, '');
+    } else if (lowerStr.includes('b')) {
+      multiplier = 1000000000;
+      numStr = cleanStr.replace(/[bB]/g, '');
+    }
+    
+    const number = parseFloat(numStr);
+    return isNaN(number) ? 0 : number * multiplier;
   };
 
   // Function to extract percentage value (e.g., "12.5%" -> 12.5)
   const parsePercentage = (percentStr) => {
     if (!percentStr) return 0;
-    return parseFloat(percentStr.replace('%', ''));
+    const cleanStr = String(percentStr).replace('%', '');
+    const number = parseFloat(cleanStr);
+    return isNaN(number) ? 0 : number;
   };
 
   // Helper function to remove empty values from filter object
@@ -182,48 +269,49 @@ const SmartFundList = () => {
 
   // Sorting functions
   const sortFunds = (funds, sortType) => {
+    if (!funds || funds.length === 0) return [];
     const sortedFunds = [...funds];
 
     switch (sortType) {
       case 'Higher value':
         return sortedFunds.sort((a, b) => {
-          const valueA = parseValue(a.tvl || a.value || '0');
-          const valueB = parseValue(b.tvl || b.value || '0');
+          const valueA = parseValue(a.valueInUSD || a.tvl || a.value || '0');
+          const valueB = parseValue(b.valueInUSD || b.tvl || b.value || '0');
           return valueB - valueA;
         });
 
       case 'Lower value':
         return sortedFunds.sort((a, b) => {
-          const valueA = parseValue(a.tvl || a.value || '0');
-          const valueB = parseValue(b.tvl || b.value || '0');
+          const valueA = parseValue(a.valueInUSD || a.tvl || a.value || '0');
+          const valueB = parseValue(b.valueInUSD || b.tvl || b.value || '0');
           return valueA - valueB;
         });
 
       case 'Higher profit':
         return sortedFunds.sort((a, b) => {
-          const profitA = parseValue(a.profit || a.totalProfit || '0');
-          const profitB = parseValue(b.profit || b.totalProfit || '0');
+          const profitA = parseValue(a.profitInUSD || a.profit || a.totalProfit || '0');
+          const profitB = parseValue(b.profitInUSD || b.profit || b.totalProfit || '0');
           return profitB - profitA;
         });
 
       case 'Lower profit':
         return sortedFunds.sort((a, b) => {
-          const profitA = parseValue(a.profit || a.totalProfit || '0');
-          const profitB = parseValue(b.profit || b.totalProfit || '0');
+          const profitA = parseValue(a.profitInUSD || a.profit || a.totalProfit || '0');
+          const profitB = parseValue(b.profitInUSD || b.profit || b.totalProfit || '0');
           return profitA - profitB;
         });
 
       case 'Higher ROI':
         return sortedFunds.sort((a, b) => {
-          const roiA = parsePercentage(a.roi || a.apy || a.return || '0%');
-          const roiB = parsePercentage(b.roi || b.apy || b.return || '0%');
+          const roiA = parsePercentage(a.apy || a.roi || a.return || '0%');
+          const roiB = parsePercentage(b.apy || b.roi || b.return || '0%');
           return roiB - roiA;
         });
 
       case 'Lower ROI':
         return sortedFunds.sort((a, b) => {
-          const roiA = parsePercentage(a.roi || a.apy || a.return || '0%');
-          const roiB = parsePercentage(b.roi || b.apy || b.return || '0%');
+          const roiA = parsePercentage(a.apy || a.roi || a.return || '0%');
+          const roiB = parsePercentage(b.apy || b.roi || b.return || '0%');
           return roiA - roiB;
         });
 
@@ -250,15 +338,84 @@ const SmartFundList = () => {
   const filteredAndSortedFunds = useMemo(() => {
     if (!state.smartFunds || state.smartFunds.length === 0) return [];
     
+    console.log('Processing funds:', state.smartFunds.length, 'Sort by:', sortBy);
+    
     // First apply advanced filters
     let filteredFunds = applyAdvancedFilters(state.smartFunds, advancedFilters);
+    console.log('After advanced filters:', filteredFunds.length);
     
     // Then filter by search query
     filteredFunds = filterFundsBySearch(filteredFunds, searchQuery);
+    console.log('After search filter:', filteredFunds.length);
     
     // Finally sort the filtered results
-    return sortFunds(filteredFunds, sortBy);
+    const sortedFunds = sortFunds(filteredFunds, sortBy);
+    console.log('After sorting:', sortedFunds.length, 'First fund value:', sortedFunds[0]?.valueInUSD || sortedFunds[0]?.tvl);
+    
+    return sortedFunds;
   }, [state.smartFunds, sortBy, searchQuery, advancedFilters]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAndSortedFunds.length / fundsPerPage);
+  const startIndex = (currentPage - 1) * fundsPerPage;
+  const endIndex = startIndex + fundsPerPage;
+  const currentFunds = filteredAndSortedFunds.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, advancedFilters]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Smooth scroll to top of funds section
+    document.getElementById('funds-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Smart pagination for many pages
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (startPage > 1) {
+        pages.push(1);
+        if (startPage > 2) pages.push('...');
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
 
   const handleSortChange = (sortExpression) => {
     setSortBy(sortExpression);
@@ -303,6 +460,22 @@ const SmartFundList = () => {
     );
   }
 
+  if (state.error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Error loading smart funds: {state.error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -314,113 +487,59 @@ const SmartFundList = () => {
         </div>
       </div>
 
-      {/* Search and Filter Section - Centered */}
-      <div className="flex flex-col items-center space-y-4 mb-6">
+      {/* Stats Section */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {stats.map((stat, index) => (
+          <div key={index} className={`p-4 rounded-xl border backdrop-blur-sm ${
+            state.isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/50 border-gray-200'
+          }`}>
+            <p className={`text-xs ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
+              {stat.label}
+            </p>
+            <p className="text-lg font-bold mb-1">{stat.value}</p>
+            <p className={`text-xs ${stat.color} flex items-center`}>
+              <ArrowUpRight className="w-3 h-3 mr-1" />
+              {stat.change}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="space-y-6">
         {/* Search Bar */}
-        <div className="relative w-full max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className={`h-5 w-5 ${state.isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-          </div>
-          <input
-            type="text"
-            placeholder="Search funds by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 pr-10 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 ${
-              state.isDarkMode 
-                ? 'bg-gray-800/50 border-gray-700 text-white placeholder-gray-400' 
-                : 'bg-white/50 border-gray-200 text-gray-900 placeholder-gray-500'
-            }`}
-          />
-          {searchQuery && (
-            <button
-              onClick={clearSearch}
-              className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
-                state.isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+        <div className="flex justify-center">
+          <div className="relative w-full max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className={`h-5 w-5 ${state.isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search funds by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full pl-10 pr-10 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 ${
+                state.isDarkMode 
+                  ? 'bg-gray-800/50 border-gray-700 text-white placeholder-gray-400' 
+                  : 'bg-white/50 border-gray-200 text-gray-900 placeholder-gray-500'
               }`}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
-        </div>
-
-        {/* Filter Controls */}
-        <div className="flex items-center space-x-4">
-          {/* Sort Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-lg border transition-all duration-200 ${
-                state.isDarkMode 
-                  ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-700/50 text-white' 
-                  : 'bg-white/50 border-gray-200 hover:bg-gray-50 text-gray-900'
-              } ${sortBy ? 'ring-2 ring-blue-500/30' : ''}`}
-            >
-              <Filter className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {sortBy ? sortOptions.find(opt => opt.value === sortBy)?.label : 'Sort by'}
-              </span>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                isFilterOpen ? 'rotate-180' : ''
-              }`} />
-            </button>
-
-            {/* Sort Dropdown Menu */}
-            {isFilterOpen && (
-              <div className={`absolute left-1/2 transform -translate-x-1/2 top-full mt-2 w-48 rounded-lg border shadow-lg z-10 ${
-                state.isDarkMode 
-                  ? 'bg-gray-800 border-gray-700' 
-                  : 'bg-white border-gray-200'
-              }`}>
-                <div className="py-1">
-                  {sortOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleSortChange(option.value)}
-                      className={`w-full text-left px-4 py-2 text-sm transition-colors duration-150 ${
-                        sortBy === option.value
-                          ? state.isDarkMode
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-50 text-blue-700'
-                          : state.isDarkMode
-                            ? 'text-gray-300 hover:bg-gray-700'
-                            : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+                  state.isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <X className="h-5 w-5" />
+              </button>
             )}
           </div>
-
-          {/* Advanced Filter Button */}
-          <button
-            onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg border transition-all duration-200 ${
-              state.isDarkMode 
-                ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-700/50 text-white' 
-                : 'bg-white/50 border-gray-200 hover:bg-gray-50 text-gray-900'
-            } ${getActiveFiltersCount() > 0 ? 'ring-2 ring-orange-500/30' : ''}`}
-          >
-            <Settings className="w-4 h-4" />
-            <span className="text-sm font-medium">Advanced Filter</span>
-            {getActiveFiltersCount() > 0 && (
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                state.isDarkMode 
-                  ? 'bg-orange-600 text-white' 
-                  : 'bg-orange-500 text-white'
-              }`}>
-                {getActiveFiltersCount()}
-              </span>
-            )}
-          </button>
         </div>
 
         {/* Advanced Filter Panel */}
         {isAdvancedFilterOpen && (
-          <div className={`w-full max-w-4xl p-6 rounded-lg border shadow-lg ${
+          <div className={`w-full max-w-4xl mx-auto p-6 rounded-lg border shadow-lg z-30 ${
             state.isDarkMode 
               ? 'bg-gray-800 border-gray-700' 
               : 'bg-white border-gray-200'
@@ -679,6 +798,82 @@ const SmartFundList = () => {
           </div>
         )}
 
+        {/* Filter Controls */}
+        <div className="flex justify-center">
+          <div className="flex items-center space-x-4">
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg border transition-all duration-200 ${
+                  state.isDarkMode 
+                    ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-700/50 text-white' 
+                    : 'bg-white/50 border-gray-200 hover:bg-gray-50 text-gray-900'
+                } ${sortBy ? 'ring-2 ring-blue-500/30' : ''}`}
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {sortBy ? sortOptions.find(opt => opt.value === sortBy)?.label : 'Sort by'}
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                  isFilterOpen ? 'rotate-180' : ''
+                }`} />
+              </button>
+
+              {/* Sort Dropdown Menu */}
+              {isFilterOpen && (
+                <div className={`absolute left-1/2 transform -translate-x-1/2 top-full mt-2 w-48 rounded-lg border shadow-lg z-50 ${
+                  state.isDarkMode 
+                    ? 'bg-gray-800 border-gray-700' 
+                    : 'bg-white border-gray-200'
+                }`}>
+                  <div className="py-1">
+                    {sortOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleSortChange(option.value)}
+                        className={`w-full text-left px-4 py-2 text-sm transition-colors duration-150 ${
+                          sortBy === option.value
+                            ? state.isDarkMode
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-blue-50 text-blue-700'
+                            : state.isDarkMode
+                              ? 'text-gray-300 hover:bg-gray-700'
+                              : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Filter Button */}
+            <button
+              onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-lg border transition-all duration-200 ${
+                state.isDarkMode 
+                  ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-700/50 text-white' 
+                  : 'bg-white/50 border-gray-200 hover:bg-gray-50 text-gray-900'
+              } ${getActiveFiltersCount() > 0 ? 'ring-2 ring-orange-500/30' : ''}`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">Advanced Filter</span>
+              {getActiveFiltersCount() > 0 && (
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  state.isDarkMode 
+                    ? 'bg-orange-600 text-white' 
+                    : 'bg-orange-500 text-white'
+                }`}>
+                  {getActiveFiltersCount()}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Active Filters Display */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {searchQuery && (
@@ -724,7 +919,7 @@ const SmartFundList = () => {
       </div>
 
       {/* Results Header */}
-      <div className="flex justify-between items-center">
+      <div id="funds-section" className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">
           Available Funds
           {filteredAndSortedFunds.length > 0 && (
@@ -735,17 +930,83 @@ const SmartFundList = () => {
             </span>
           )}
         </h2>
+        {filteredAndSortedFunds.length > 0 && totalPages > 1 && (
+          <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredAndSortedFunds.length)} of {filteredAndSortedFunds.length} funds
+          </p>
+        )}
       </div>
 
       {/* Smart Funds Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAndSortedFunds.map((fund) => (
-          <SmartFundCard key={fund.id} fund={fund} />
-        ))}
-      </div>
+      {currentFunds.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {currentFunds.map((fund) => (
+              <SmartFundCard key={fund.id} fund={fund} />
+            ))}
+          </div>
 
-      {/* No funds message */}
-      {filteredAndSortedFunds.length === 0 && !state.isLoading && (
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              {/* Previous Button */}
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className={`flex items-center px-3 py-2 rounded-lg ${
+                  currentPage === 1
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                } ${state.isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex space-x-1">
+                {getPageNumbers().map((page, index) => (
+                  <React.Fragment key={index}>
+                    {page === '...' ? (
+                      <span className={`px-3 py-2 ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 rounded-lg ${
+                          currentPage === page
+                            ? 'bg-blue-500 text-white'
+                            : state.isDarkMode
+                            ? 'text-gray-300 hover:bg-gray-700'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className={`flex items-center px-3 py-2 rounded-lg ${
+                  currentPage === totalPages
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                } ${state.isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        /* No funds message */
         <div className={`text-center py-12 ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {searchQuery || getActiveFiltersCount() > 0 ? (
             <>
@@ -794,7 +1055,7 @@ const SmartFundList = () => {
       {/* Click outside to close dropdowns */}
       {(isFilterOpen || isAdvancedFilterOpen) && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-10" 
           onClick={() => {
             setIsFilterOpen(false);
             setIsAdvancedFilterOpen(false);

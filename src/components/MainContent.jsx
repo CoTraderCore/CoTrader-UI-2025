@@ -12,9 +12,9 @@ const MainContent = () => {
   const renderPage = () => {
     switch (state.currentPage) {
       case 'dashboard':
-        return <Dashboard />;
-      case 'funds':
         return <SmartFundList />;
+      case 'funds':
+        return <MockPage title="Users" description="Manage and view user profiles and statistics" />;
       case 'fund-details':
         return <FundDetails />;
       case 'users':
