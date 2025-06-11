@@ -330,7 +330,8 @@ const SmartFundList = () => {
       fund.title?.toLowerCase().includes(lowercaseQuery) ||
       fund.strategy?.toLowerCase().includes(lowercaseQuery) ||
       fund.description?.toLowerCase().includes(lowercaseQuery) ||
-      fund.owner?.toLowerCase().includes(lowercaseQuery)
+      fund.owner?.toLowerCase().includes(lowercaseQuery) ||
+      fund.address?.toLowerCase().includes(lowercaseQuery)
     );
   };
 
@@ -515,7 +516,7 @@ const SmartFundList = () => {
             </div>
             <input
               type="text"
-              placeholder="Search funds by name..."
+              placeholder="Search funds by name, address..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full pl-10 pr-10 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 ${
@@ -942,7 +943,7 @@ const SmartFundList = () => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentFunds.map((fund) => (
-              <SmartFundCard key={fund.id} fund={fund} />
+              <SmartFundCard key={fund.id || fund.address} fund={fund} />
             ))}
           </div>
 
