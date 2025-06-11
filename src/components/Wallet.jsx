@@ -1,6 +1,6 @@
-// Wallet.js
-import React, { useState } from "react";
-import { Wallet as WalletIcon, User, LogOut, AlertCircle, Loader } from "lucide-react";
+// components/Wallet.js
+import React, { useState, useContext, useEffect } from "react";
+import { Wallet as WalletIcon, User, AlertCircle, Loader } from "lucide-react";
 import getWeb3 from "../models/getWeb3";
 import Web3Context from "../context/Web3Context";
 
@@ -35,8 +35,8 @@ const connectWallet = async (setWeb3, setAccounts, setNetId, setIsConnecting, se
   }
 };
 
-function Wallet(props) {
-  const context = React.useContext(Web3Context);
+const Wallet = () => {
+  const context = useContext(Web3Context);
   const web3 = context?.web3;
   const accounts = context?.accounts;
   const setWeb3 = context?.setWeb3;
@@ -62,151 +62,92 @@ function Wallet(props) {
     connectWallet(setWeb3, setAccounts, setNetId, setIsConnecting, setError);
   };
 
-  const buttonStyle = {
-    background: web3 && accounts?.length > 0 
-      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
-      : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-    color: 'white',
-    border: 'none',
-    padding: '10px 16px',
-    borderRadius: '10px',
-    fontWeight: '600',
-    cursor: isConnecting ? 'not-allowed' : 'pointer',
-    transition: 'all 0.3s ease',
-    fontSize: '13px',
-    boxShadow: web3 && accounts?.length > 0 
-      ? '0 2px 8px rgba(16, 185, 129, 0.3)' 
-      : '0 2px 8px rgba(99, 102, 241, 0.3)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    minWidth: '120px',
-    justifyContent: 'center',
-    opacity: isConnecting ? 0.7 : 1,
-    position: 'relative'
-  };
-
   const formatAddress = (address) => {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const tooltipStyle = {
-    position: 'absolute',
-    top: '100%',
-    right: '0',
-    background: 'rgba(15, 23, 42, 0.95)',
-    border: '1px solid rgba(71, 85, 105, 0.5)',
-    borderRadius: '8px',
-    padding: '8px 12px',
-    color: 'white',
-    fontSize: '12px',
-    whiteSpace: 'nowrap',
-    zIndex: 1000,
-    marginTop: '4px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-    display: showTooltip ? 'block' : 'none'
-  };
-
-  const errorStyle = {
-    position: 'absolute',
-    top: '100%',
-    right: '0',
-    background: 'rgba(239, 68, 68, 0.95)',
-    border: '1px solid rgba(239, 68, 68, 0.5)',
-    borderRadius: '8px',
-    padding: '8px 12px',
-    color: 'white',
-    fontSize: '12px',
-    maxWidth: '250px',
-    zIndex: 1000,
-    marginTop: '4px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-    display: error ? 'block' : 'none'
-  };
-
   // Clear error after 5 seconds
-  React.useEffect(() => {
+  useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(''), 5000);
       return () => clearTimeout(timer);
     }
   }, [error]);
 
+  const isConnected = web3 && accounts && accounts.length > 0;
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      {web3 && accounts && accounts.length > 0 ? (
+    <div className="relative inline-block">
+      {isConnected ? (
         <button
-          style={buttonStyle}
-          onMouseOver={(e) => {
-            if (!isConnecting) {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
-              setShowTooltip(true);
-            }
-          }}
-          onMouseOut={(e) => {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
-            setShowTooltip(false);
-          }}
+          className={`
+            flex items-center justify-center gap-2 px-4 py-2.5 min-w-[120px]
+            bg-gradient-to-r from-green-500 to-green-600 
+            hover:from-green-600 hover:to-green-700
+            text-white font-semibold text-sm rounded-lg
+            transition-all duration-300 ease-in-out
+            shadow-lg shadow-green-500/30 hover:shadow-green-500/40
+            hover:-translate-y-0.5 hover:shadow-xl
+            disabled:opacity-70 disabled:cursor-not-allowed
+            disabled:hover:transform-none disabled:hover:shadow-lg
+          `}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
           onClick={disconnectWallet}
           disabled={isConnecting}
         >
           <User size={14} />
-          {formatAddress(accounts[0])}
+          <span>{formatAddress(accounts[0])}</span>
         </button>
       ) : (
         <button
-          style={buttonStyle}
+          className={`
+            flex items-center justify-center gap-2 px-4 py-2.5 min-w-[120px]
+            bg-gradient-to-r from-blue-500 to-purple-500 
+            hover:from-blue-600 hover:to-purple-600
+            text-white font-semibold text-sm rounded-lg
+            transition-all duration-300 ease-in-out
+            shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40
+            hover:-translate-y-0.5 hover:shadow-xl
+            disabled:opacity-70 disabled:cursor-not-allowed
+            disabled:hover:transform-none disabled:hover:shadow-lg
+          `}
           onClick={handleConnect}
           disabled={isConnecting}
-          onMouseOver={(e) => {
-            if (!isConnecting) {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
-            }
-          }}
-          onMouseOut={(e) => {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.3)';
-          }}
         >
           {isConnecting ? (
             <>
-              <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
-              Connecting...
+              <Loader size={14} className="animate-spin" />
+              <span>Connecting...</span>
             </>
           ) : (
             <>
               <WalletIcon size={14} />
-              Connect Wallet
+              <span>Connect Wallet</span>
             </>
           )}
         </button>
       )}
       
       {/* Tooltip for connected state */}
-      <div style={tooltipStyle}>
-        Click to disconnect
-      </div>
+      {showTooltip && isConnected && (
+        <div className="absolute top-full right-0 mt-1 px-3 py-2 bg-gray-900/95 text-white text-xs rounded-lg border border-gray-700/50 shadow-xl z-50 whitespace-nowrap">
+          Click to disconnect
+        </div>
+      )}
       
       {/* Error tooltip */}
-      <div style={errorStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <AlertCircle size={12} />
-          {error}
+      {error && (
+        <div className="absolute top-full right-0 mt-1 px-3 py-2 bg-red-500/95 text-white text-xs rounded-lg border border-red-500/50 shadow-xl z-50 max-w-[250px]">
+          <div className="flex items-center gap-1">
+            <AlertCircle size={12} />
+            <span>{error}</span>
+          </div>
         </div>
-      </div>
-      
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      )}
     </div>
   );
-}
+};
 
 export default Wallet;
