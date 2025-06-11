@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import SmartFundList from './components/SmartFundList';
 import FundDetails from './components/FundDetails';
+import MockPage from './components/MockPage';
 
 // Layout Component
 const Layout = ({ children }) => {
@@ -47,8 +48,18 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        {/* Default route - redirect to funds list */}
-        <Route path="/" element={<Navigate to="/funds" replace />} />
+        {/* Default route - redirect to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Dashboard route */}
+        <Route path="/dashboard" element={
+          <Layout>
+            <MockPage 
+              title="Dashboard" 
+              description="Welcome to your DeFi dashboard" 
+            />
+          </Layout>
+        } />
         
         {/* Funds list route */}
         <Route path="/funds" element={
@@ -64,8 +75,48 @@ const App = () => {
           </Layout>
         } />
         
-        {/* Catch all route - redirect to funds list */}
-        <Route path="*" element={<Navigate to="/funds" replace />} />
+        {/* Users route */}
+        <Route path="/users" element={
+          <Layout>
+            <MockPage 
+              title="Users" 
+              description="Manage and view user information" 
+            />
+          </Layout>
+        } />
+        
+        {/* Transactions route */}
+        <Route path="/transactions" element={
+          <Layout>
+            <MockPage 
+              title="Transactions" 
+              description="View and track all transaction history" 
+            />
+          </Layout>
+        } />
+        
+        {/* Analytics route */}
+        <Route path="/analytics" element={
+          <Layout>
+            <MockPage 
+              title="Analytics" 
+              description="Comprehensive analytics and insights" 
+            />
+          </Layout>
+        } />
+        
+        {/* Settings route */}
+        <Route path="/settings" element={
+          <Layout>
+            <MockPage 
+              title="Settings" 
+              description="Configure your application preferences" 
+            />
+          </Layout>
+        } />
+        
+        {/* Catch all route - redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );
