@@ -51,8 +51,8 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        {/* Default route - redirect to dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Default route - redirect to funds */}
+        <Route path="/" element={<Navigate to="/funds" replace />} />
         
         {/* Dashboard route */}
         <Route path="/dashboard" element={

@@ -49,17 +49,7 @@ const Navbar = () => {
               {state.isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             
-            <button
-              onClick={connectWallet}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                isWalletConnected
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                  : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
-              }`}
-            >
-              <Wallet className="w-4 h-4" />
-              <span>{isWalletConnected ? '0x1234...5678' : 'Connect Wallet'}</span>
-            </button>
+            <Wallet />
           </div>
         </div>
       </div>
