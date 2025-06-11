@@ -1,13 +1,16 @@
 // App.js
+import './polyfills.js' 
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { DeFiProvider, useDeFi } from './context/DeFiContext';
+import Web3Context from './context/Web3Context';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import SmartFundList from './components/SmartFundList';
 import FundDetails from './components/FundDetails';
 import MockPage from './components/MockPage';
+
 
 // Layout Component
 const Layout = ({ children }) => {
@@ -124,11 +127,20 @@ const App = () => {
 
 // App with Provider
 const AppWithProvider = () => {
+  const [web3, setWeb3] = useState(null)
+  const [accounts, setAccounts] = useState(null)
+  const [netId, setNetId] = useState(null)
+
+
   return (
+    <>
+    <Web3Context.Provider value={{ web3, setWeb3, accounts, setAccounts, netId, setNetId }}>
     <DeFiProvider>
       <App />
     </DeFiProvider>
-  );
+    </Web3Context.Provider>
+    </>
+    )
 };
 
 export default AppWithProvider;

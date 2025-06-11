@@ -1,7 +1,8 @@
 // components/Navbar.js
 import React, { useState } from 'react';
-import { Wallet, TrendingUp, Sun, Moon } from 'lucide-react';
+import { TrendingUp, Sun, Moon } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
+import Wallet from './Wallet';
 
 const Navbar = () => {
   const { state, dispatch } = useDeFi();

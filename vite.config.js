@@ -8,13 +8,27 @@ export default defineConfig({
       include: "**/*.{jsx,js,ts,tsx}",
     })
   ],
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+      process: 'process',
+      util: 'util',
+    },
+  },
   esbuild: {
     loader: "jsx",
     include: /src\/.*\.[jt]sx?$/,
     exclude: [],
   },
   optimizeDeps: {
+    include: ['buffer', 'process', 'util'],
     esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
       loader: {
         ".js": "jsx",
       },
