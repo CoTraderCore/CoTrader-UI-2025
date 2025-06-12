@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
+import Deposit from './actions/Deposit/Deposit';
 
 const FundDetails = () => {
   const { fundAddress } = useParams();
@@ -11,6 +12,10 @@ const FundDetails = () => {
   const [fund, setFund] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
+
+  const pendingHandler = () => {
+    alert("TODO show effect")
+  };
 
   useEffect(() => {
     // Find the fund by address from the smart funds data
@@ -294,9 +299,12 @@ const FundDetails = () => {
           }`}>
             <h2 className="text-xl font-bold mb-4">Actions</h2>
             <div className="space-y-3">
-              <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Deposit
-              </button>
+             <Deposit 
+                address={fund.address}
+                mainAsset={fund.mainAsset || 'ETH'}
+                version={fund.version || 1}
+                pending={pendingHandler}
+               />
               <button className="w-full bg-gradient-to-r from-red-500 to-pink-600 text-white py-3 rounded-xl font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl">
                 Withdraw
               </button>

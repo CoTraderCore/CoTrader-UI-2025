@@ -10,11 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.21.0",
+    "@emotion/react": "^11.14.0",
     "@walletconnect/web3-provider": "^1.8.0",
     "@web3modal/ethereum": "^2.7.1",
     "@web3modal/react": "^2.7.1",
     "authereum": "^0.1.14",
     "axios": "^1.9.0",
+    "bignumber.js": "^9.3.0",
     "buffer": "^6.0.3",
     "fortmatic": "^2.4.0",
     "lucide-react": "^0.513.0",
@@ -26,6 +29,7 @@
     "viem": "^2.31.0",
     "wagmi": "^2.15.6",
     "web3": "^4.16.0",
+    "web3-utils": "^4.3.3",
     "web3modal": "^1.9.12"
   },
   "devDependencies": {
