@@ -10,7 +10,7 @@ import Sidebar from './components/Sidebar';
 import SmartFundList from './components/SmartFundList';
 import FundDetails from './components/FundDetails';
 import MockPage from './components/MockPage';
-
+import CreateFund from './components/actions/CreateFund.jsx'; 
 
 // Layout Component
 const Layout = ({ children }) => {
@@ -68,6 +68,13 @@ const App = () => {
         <Route path="/funds" element={
           <Layout>
             <SmartFundList />
+          </Layout>
+        } />
+
+        {/* Create fund route */}
+        <Route path="/create-fund" element={
+          <Layout>
+            <CreateFund />
           </Layout>
         } />
         
