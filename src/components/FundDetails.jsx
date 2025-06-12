@@ -365,7 +365,7 @@ const FundDetails = () => {
           }`}>
             <h2 className={`text-xl font-bold mb-4 ${
               state.isDarkMode ? 'text-white' : 'text-gray-900'
-            }`}>Actions</h2>
+            }`}>Investor Actions</h2>
             <div className="space-y-3">
               <Deposit 
                 address={fund.address}
