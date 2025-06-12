@@ -6,6 +6,7 @@ import { useDeFi } from '../context/DeFiContext';
 import Deposit from './actions/Deposit/Deposit';
 import Withdraw from './actions/Withdraw';
 import Trade from './actions/Trade';
+import TakeCut from './actions/TakeCut';
 
 const FundDetails = () => {
   const { fundAddress } = useParams();
@@ -394,17 +395,12 @@ const FundDetails = () => {
                   version={fund.version || 1}
                   pending={pendingHandler}
                 />
-                <button
-                  onClick={handleTakeCut}
-                  className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-colors ${
-                    state.isDarkMode
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
-                  }`}
-                >
-                  <Scissors className="w-4 h-4" />
-                  <span>Take Cut</span>
-                </button>
+                <TakeCut
+                  address={fund.address}
+                  mainAsset={fund.mainAsset || 'MATIC'}
+                  version={fund.version || 1}
+                  pending={pendingHandler}
+                />
               </div>
             </div>
           </div>
