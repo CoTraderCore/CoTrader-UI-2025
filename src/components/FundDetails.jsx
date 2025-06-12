@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
 import Deposit from './actions/Deposit/Deposit';
+import Withdraw from './actions/Withdraw';
 
 const FundDetails = () => {
   const { fundAddress } = useParams();
@@ -13,8 +14,11 @@ const FundDetails = () => {
   const [loading, setLoading] = useState(true);
   const [copiedAddress, setCopiedAddress] = useState(false);
 
-  const pendingHandler = () => {
-    alert("TODO show effect");
+  const pendingHandler = (status, count) => {
+    // Handle pending transaction state updates
+    console.log('Pending transaction:', { status, count });
+    // You can dispatch to update global state here if needed
+    // dispatch({ type: 'SET_PENDING_TRANSACTIONS', payload: { status, count } });
   };
 
   useEffect(() => {
@@ -244,23 +248,19 @@ const FundDetails = () => {
               state.isDarkMode ? 'text-white' : 'text-gray-900'
             }`}>Asset Allocation</h2>
             <div className="space-y-3">
-              {(fund.assets || ['ETH']).map((asset, index) => {
-                const percentage = Math.floor(Math.random() * 40 + 10); // Mock percentage
-                return (
-                  <div key={index} className="flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${
-                        index % 4 === 0 ? 'from-blue-500 to-blue-600' :
-                        index % 4 === 1 ? 'from-green-500 to-green-600' :
-                        index % 4 === 2 ? 'from-purple-500 to-purple-600' :
-                        'from-orange-500 to-orange-600'
-                      }`} />
-                      <span className="font-medium">{asset}</span>
-                    </div>
-                    <span className="font-mono font-medium">{percentage}%</span>
+              {(fund.assets || []).map((asset, index) => (
+                <div key={index} className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${
+                      index % 4 === 0 ? 'from-blue-500 to-blue-600' :
+                      index % 4 === 1 ? 'from-green-500 to-green-600' :
+                      index % 4 === 2 ? 'from-purple-500 to-purple-600' :
+                      'from-orange-500 to-orange-600'
+                    }`} />
+                    <span className="font-medium">{asset}</span>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -347,15 +347,18 @@ const FundDetails = () => {
               state.isDarkMode ? 'text-white' : 'text-gray-900'
             }`}>Actions</h2>
             <div className="space-y-3">
-             <Deposit 
+              <Deposit 
                 address={fund.address}
-                mainAsset={fund.mainAsset || 'ETH'}
+                mainAsset={fund.mainAsset || 'MATIC'}
                 version={fund.version || 1}
                 pending={pendingHandler}
-               />
-              <button className="w-full bg-gradient-to-r from-red-500 to-pink-600 text-white py-3 rounded-xl font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Withdraw
-              </button>
+              />
+              <Withdraw
+                address={fund.address}
+                mainAsset={fund.mainAsset || 'MATIC'}
+                version={fund.version || 1}
+                pending={pendingHandler}
+              />
             </div>
           </div>
 
