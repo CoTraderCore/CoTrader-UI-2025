@@ -1,11 +1,14 @@
-// Deposit.js - Updated with modern dark/light theme styles
+// Deposit.js - Updated with Tailwind CSS and day/night theme
 import React, { useState, useContext } from 'react';
+import { IoCheckmark, IoClose } from 'react-icons/io5';
 import Web3Context from '../../../context/Web3Context';
+import { useDeFi } from '../../../context/DeFiContext';
 import DepositETH from './DepositETH';
 import DepositERC20 from './DepositERC20';
 
 function Deposit({ address, mainAsset, version, pending }) {
   const { web3, accounts } = useContext(Web3Context);
+  const { state } = useDeFi();
   const [show, setShow] = useState(false);
   const [agree, setAgree] = useState(false);
 
@@ -23,6 +26,29 @@ function Deposit({ address, mainAsset, version, pending }) {
       modalClose();
     }
   };
+
+  const termsData = [
+    {
+      number: 1,
+      text: "I certify that I'm not a USA citizen or resident.",
+      color: 'red'
+    },
+    {
+      number: 2,
+      text: "I understand CoTrader technology is new and is not to be trusted.",
+      color: 'orange'
+    },
+    {
+      number: 3,
+      text: "I understand that CoTrader aims to protect investors with technology regulation, that aims to prove fees, fair play, and past performance.",
+      color: 'blue'
+    },
+    {
+      number: 4,
+      text: "I understand I shouldn't deposit anything I can't afford to lose.",
+      color: 'yellow'
+    }
+  ];
 
   if (!show) {
     return (
@@ -45,24 +71,34 @@ function Deposit({ address, mainAsset, version, pending }) {
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={handleOverlayClick}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-auto shadow-2xl border border-gray-200 dark:border-gray-700">
+      <div className={`rounded-2xl max-w-md w-full max-h-[90vh] overflow-auto shadow-2xl border ${
+        state.isDarkMode 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-white border-gray-200'
+      }`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className={`flex items-center justify-between p-6 border-b ${
+          state.isDarkMode ? 'border-gray-700' : 'border-gray-200'
+        }`}>
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <IoCheckmark className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Terms and Conditions</h2>
+            <h2 className={`text-xl font-bold ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              Terms and Conditions
+            </h2>
           </div>
           <button 
             onClick={modalClose}
-            className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              state.isDarkMode 
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+            }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <IoClose className="w-5 h-5" />
           </button>
         </div>
 
@@ -70,28 +106,32 @@ function Deposit({ address, mainAsset, version, pending }) {
         <div className="p-6 space-y-6">
           {/* Terms List */}
           <div className="space-y-4">
-            <ol className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-              <li className="flex items-start space-x-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                <span>I certify that I'm not a USA citizen or resident.</span>
-              </li>
-              <li className="flex items-start space-x-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                <span>I understand CoTrader technology is new and is not to be trusted.</span>
-              </li>
-              <li className="flex items-start space-x-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                <span>I understand that CoTrader aims to protect investors with technology regulation, that aims to prove fees, fair play, and past performance.</span>
-              </li>
-              <li className="flex items-start space-x-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                <span>I understand I shouldn't deposit anything I can't afford to lose.</span>
-              </li>
+            <ol className="space-y-3 text-sm">
+              {termsData.map((term, index) => (
+                <li key={index} className="flex items-start space-x-3">
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    term.color === 'red' ? 
+                      (state.isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-600') :
+                    term.color === 'orange' ? 
+                      (state.isDarkMode ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-600') :
+                    term.color === 'blue' ? 
+                      (state.isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600') :
+                      (state.isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-600')
+                  }`}>
+                    {term.number}
+                  </span>
+                  <span className={state.isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
+                    {term.text}
+                  </span>
+                </li>
+              ))}
             </ol>
           </div>
 
           {/* Checkbox Agreement */}
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+          <div className={`rounded-xl p-4 ${
+            state.isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+          }`}>
             <label className="flex items-start space-x-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -99,7 +139,9 @@ function Deposit({ address, mainAsset, version, pending }) {
                 checked={agree}
                 className="mt-1 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
               />
-              <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              <span className={`text-sm leading-relaxed ${
+                state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 I agree to the above Terms and Conditions to use this product.
                 By cancelling you will not gain access to the service.
               </span>
@@ -108,7 +150,9 @@ function Deposit({ address, mainAsset, version, pending }) {
 
           {/* Deposit Component */}
           {agree && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div className={`border-t pt-6 ${
+              state.isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            }`}>
               {["BASE", "ETH", "BNB", "MATIC"].includes(mainAsset) ? (
                 <DepositETH
                   mainAsset={mainAsset}

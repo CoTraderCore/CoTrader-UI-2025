@@ -1,13 +1,16 @@
-// DepositETH.js - Updated with modern dark/light theme styles
+// DepositETH.js - Updated with Tailwind CSS and day/night theme
 import React, { useState, useEffect, useContext } from 'react';
+import { IoAdd, IoWarning } from 'react-icons/io5';
 import { fromWei, toWei } from 'web3-utils';
 import axios from 'axios';
 import { APIEnpoint, SmartFundABI } from '../../../config.js';
 import setPending from '../../../utils/setPending.js';
 import Web3Context from '../../../context/Web3Context';
+import { useDeFi } from '../../../context/DeFiContext';
 
 function DepositETH({ mainAsset, address, pending, modalClose }) {
   const { web3, accounts } = useContext(Web3Context);
+  const { state } = useDeFi();
   const [depositValue, setDepositValue] = useState('');
   const [valueError, setValueError] = useState('');
   const [ethBalance, setEthBalance] = useState('0');
@@ -97,7 +100,9 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label className={`text-sm font-medium ${
+            state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
             Enter {mainAsset}
           </label>
           <button
@@ -116,22 +121,36 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
             placeholder="0.0"
             value={depositValue}
             onChange={(e) => setDepositValue(e.target.value)}
-            className="w-full px-4 py-4 text-lg border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            className={`w-full px-4 py-4 text-lg border rounded-xl transition-all duration-200 pr-20 ${
+              state.isDarkMode 
+                ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }`}
           />
           <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md">
+            <span className={`text-sm font-medium px-2 py-1 rounded-md ${
+              state.isDarkMode 
+                ? 'bg-gray-600 text-gray-400' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
               {mainAsset}
             </span>
           </div>
         </div>
         
         {valueError && (
-          <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className={`mt-2 p-3 rounded-lg border ${
+            state.isDarkMode 
+              ? 'bg-red-900/20 border-red-800' 
+              : 'bg-red-50 border-red-200'
+          }`}>
             <div className="flex items-center space-x-2">
-              <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm text-red-700 dark:text-red-400">{valueError}</span>
+              <IoWarning className="w-4 h-4 text-red-500" />
+              <span className={`text-sm ${
+                state.isDarkMode ? 'text-red-400' : 'text-red-700'
+              }`}>
+                {valueError}
+              </span>
             </div>
           </div>
         )}
@@ -152,9 +171,7 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
           </>
         ) : (
           <>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
+            <IoAdd className="w-5 h-5" />
             <span>Deposit {mainAsset}</span>
           </>
         )}

@@ -1,4 +1,4 @@
-// components/FundDetails.js
+// components/FundDetails.js - Updated with Tailwind CSS and day/night theme
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
@@ -14,7 +14,7 @@ const FundDetails = () => {
   const [copiedAddress, setCopiedAddress] = useState(false);
 
   const pendingHandler = () => {
-    alert("TODO show effect")
+    alert("TODO show effect");
   };
 
   useEffect(() => {
@@ -88,9 +88,15 @@ const FundDetails = () => {
         </div>
         
         <div className="text-center py-12">
-          <h1 className="text-3xl font-bold mb-4">Fund Not Found</h1>
-          <p className={`text-lg mb-6 ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            The fund with address <code className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">{fundAddress}</code> could not be found.
+          <h1 className={`text-3xl font-bold mb-4 ${
+            state.isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>Fund Not Found</h1>
+          <p className={`text-lg mb-6 ${
+            state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            The fund with address <code className={`px-2 py-1 rounded ${
+              state.isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+            }`}>{fundAddress}</code> could not be found.
           </p>
           <button
             onClick={handleBack}
@@ -135,9 +141,13 @@ const FundDetails = () => {
 
       {/* Fund Title and Address */}
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold">{fund.name}</h1>
+        <h1 className={`text-4xl font-bold ${
+          state.isDarkMode ? 'text-white' : 'text-gray-900'
+        }`}>{fund.name}</h1>
         <div className="flex items-center space-x-3">
-          <span className={`font-mono text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <span className={`font-mono text-sm ${
+            state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>
             {formatAddress(fund.address)}
           </span>
           <button
@@ -177,34 +187,50 @@ const FundDetails = () => {
           <div className={`p-6 rounded-2xl border ${
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <h2 className="text-xl font-bold mb-4">Fund Overview</h2>
-            <p className={`mb-6 ${state.isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <h2 className={`text-xl font-bold mb-4 ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Fund Overview</h2>
+            <p className={`mb-6 ${
+              state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
               {fund.description}
             </p>
             
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Manager</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Manager</p>
                 <p className="font-mono text-sm">{formatAddress(fund.manager || fund.owner)}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Inception Date</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Inception Date</p>
                 <p>{fund.inception}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Total Investors</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Total Investors</p>
                 <p>{fund.totalInvestors || 0}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Min Investment</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Min Investment</p>
                 <p>{fund.minimumInvestment}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Manager Fee</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Manager Fee</p>
                 <p>{fund.managerFee ? `${(fund.managerFee / 100).toFixed(2)}%` : 'N/A'}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Main Asset</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Main Asset</p>
                 <p>{fund.mainAsset || 'MATIC'}</p>
               </div>
             </div>
@@ -214,7 +240,9 @@ const FundDetails = () => {
           <div className={`p-6 rounded-2xl border ${
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <h2 className="text-xl font-bold mb-4">Asset Allocation</h2>
+            <h2 className={`text-xl font-bold mb-4 ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Asset Allocation</h2>
             <div className="space-y-3">
               {(fund.assets || ['ETH']).map((asset, index) => {
                 const percentage = Math.floor(Math.random() * 40 + 10); // Mock percentage
@@ -240,24 +268,34 @@ const FundDetails = () => {
           <div className={`p-6 rounded-2xl border ${
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <h2 className="text-xl font-bold mb-4">Financial Data</h2>
+            <h2 className={`text-xl font-bold mb-4 ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Financial Data</h2>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Value in MATIC</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Value in MATIC</p>
                 <p className="text-lg font-bold">{fund.valueInETH || '0'} MATIC</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Value in USD</p>
-                <p className="text-lg font-bold">${fund.valueInUSD || '0'}</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Value in USD</p>
+                <p className="text-lg font-bold">{fund.valueInUSD || '$0'}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Profit in MATIC</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Profit in MATIC</p>
                 <p className={`text-lg font-bold ${parseFloat(fund.profitInETH || '0') >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {fund.profitInETH || '0'} MATIC
                 </p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Profit in USD</p>
+                <p className={`text-sm mb-1 ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Profit in USD</p>
                 <p className={`text-lg font-bold ${parseFloat(fund.profitInUSD || '0') >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   ${fund.profitInUSD || '0'}
                 </p>
@@ -272,18 +310,26 @@ const FundDetails = () => {
           <div className={`p-6 rounded-2xl border ${
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <h2 className="text-xl font-bold mb-4">Key Metrics</h2>
+            <h2 className={`text-xl font-bold mb-4 ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Key Metrics</h2>
             <div className="space-y-4">
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Value Locked</p>
+                <p className={`text-sm ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Total Value Locked</p>
                 <p className="text-2xl font-bold text-green-500">{fund.tvl}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Annual Percentage Yield</p>
+                <p className={`text-sm ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Annual Percentage Yield</p>
                 <p className="text-2xl font-bold text-blue-500">{fund.apy}</p>
               </div>
               <div>
-                <p className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Performance</p>
+                <p className={`text-sm ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Performance</p>
                 <p className={`text-xl font-bold ${
                   fund.performance?.startsWith('+') ? 'text-green-500' : 'text-red-500'
                 }`}>
@@ -297,7 +343,9 @@ const FundDetails = () => {
           <div className={`p-6 rounded-2xl border ${
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <h2 className="text-xl font-bold mb-4">Actions</h2>
+            <h2 className={`text-xl font-bold mb-4 ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Actions</h2>
             <div className="space-y-3">
              <Deposit 
                 address={fund.address}
@@ -315,14 +363,20 @@ const FundDetails = () => {
           <div className={`p-6 rounded-2xl border ${
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <h2 className="text-xl font-bold mb-4">Fund Status</h2>
+            <h2 className={`text-xl font-bold mb-4 ${
+              state.isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Fund Status</h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Version</span>
+                <span className={`text-sm ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Version</span>
                 <span className="font-medium">v{fund.version || 1}</span>
               </div>
               <div className="flex justify-between">
-                <span className={`text-sm ${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trade Verification</span>
+                <span className={`text-sm ${
+                  state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>Trade Verification</span>
                 <span className={`px-2 py-1 rounded text-xs ${
                   fund.tradeVerification 
                     ? 'bg-green-500/20 text-green-500' 
