@@ -1,10 +1,11 @@
 // components/FundDetails.js - Updated with Tailwind CSS and day/night theme
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Copy, Check, TrendingUp, Scissors } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
 import Deposit from './actions/Deposit/Deposit';
 import Withdraw from './actions/Withdraw';
+import Trade from './actions/Trade';
 
 const FundDetails = () => {
   const { fundAddress } = useParams();
@@ -42,6 +43,12 @@ const FundDetails = () => {
     navigate('/funds');
   };
 
+  const handleTakeCut = () => {
+    // Handle take cut action
+    console.log('Take cut action triggered for fund:', fund.address);
+    // Add your take cut logic here
+  };
+
   const copyAddress = async () => {
     if (fund?.address) {
       try {
@@ -67,6 +74,18 @@ const FundDetails = () => {
       default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
     }
   };
+
+  // Check if current user is the fund manager
+  const isManager = state.account && fund?.manager && 
+    state.account.toLowerCase() === fund.manager.toLowerCase();
+
+  // Debug logging - remove this after testing
+  console.log('Debug Manager Check:', {
+    'state.account': state.account,
+    'fund.manager': fund?.manager,
+    'fund.owner': fund?.owner,
+    'isConnected': !!state.account
+  });
 
   if (loading) {
     return (
@@ -359,6 +378,34 @@ const FundDetails = () => {
                 version={fund.version || 1}
                 pending={pendingHandler}
               />
+            </div>
+
+            {/* Manager Actions */}
+            <div className={`mt-6 pt-4 border-t ${
+              state.isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-semibold mb-3 ${
+                state.isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>Manager Actions</h3>
+              <div className="space-y-3">
+                <Trade 
+                  address={fund.address}
+                  mainAsset={fund.mainAsset || 'MATIC'}
+                  version={fund.version || 1}
+                  pending={pendingHandler}
+                />
+                <button
+                  onClick={handleTakeCut}
+                  className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                    state.isDarkMode
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                >
+                  <Scissors className="w-4 h-4" />
+                  <span>Take Cut</span>
+                </button>
+              </div>
             </div>
           </div>
 
