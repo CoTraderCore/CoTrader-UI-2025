@@ -34,4 +34,15 @@ export default defineConfig({
       },
     },
   },
+  // Add this to handle SES warnings
+  build: {
+    commonjsOptions: { transformMixedEsModules: true },
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress dateTaming warnings
+        if (warning.message.includes('dateTaming')) return;
+        warn(warning);
+      }
+    }
+  }
 })
