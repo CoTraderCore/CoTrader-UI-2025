@@ -198,7 +198,7 @@ const FundDetails = () => {
             }`}
           >
             <ExternalLink className="w-3 h-3" />
-            <span>View on PolygonScan</span>
+            <span>View on Scan</span>
           </a>
         </div>
       </div>

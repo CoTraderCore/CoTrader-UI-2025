@@ -1,16 +1,5 @@
-// DepositERC20.js - Updated for Chakra UI v3.21.0
+// DepositERC20.js - Updated with Tailwind CSS and day/night theme
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import {
-  Stack,
-  HStack,
-  Button,
-  Input,
-  Text,
-  Box,
-  Alert,
-  Badge,
-  Spinner
-} from '@chakra-ui/react';
 import { IoLockClosed, IoAdd, IoWarning } from 'react-icons/io5';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
@@ -32,13 +21,6 @@ function DepositERC20({ mainAsset, address, pending, modalClose }) {
   const [symbol, setSymbol] = useState('');
   const [tokenBalance, setTokenBalance] = useState('0');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Color mode values based on your theme system
-  const inputBg = state.isDarkMode ? 'gray.700' : 'white';
-  const inputBorder = state.isDarkMode ? 'gray.600' : 'gray.300';
-  const textColor = state.isDarkMode ? 'white' : 'gray.900';
-  const secondaryText = state.isDarkMode ? 'gray.300' : 'gray.600';
-  const badgeBg = state.isDarkMode ? 'gray.600' : 'gray.100';
 
   const updateAllowance = useCallback(async () => {
     if (!ercAssetContract || !accounts || !accounts[0] || !depositValue) return false;
@@ -200,165 +182,131 @@ function DepositERC20({ mainAsset, address, pending, modalClose }) {
   };
 
   return (
-    <Stack gap={4} align="stretch">
-      <Box>
-        <HStack justify="space-between" marginBottom={3}>
-          <Text fontSize="sm" fontWeight="medium" color={secondaryText}>
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <label className={`text-sm font-medium ${
+            state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
             Enter {symbol || 'Token'}
-          </Text>
-          <Button
-            size="xs"
-            variant="outline"
-            colorPalette="blue"
+          </label>
+          <button
             onClick={handleMaxClick}
-            borderRadius="lg"
-            fontSize="xs"
-            paddingX={3}
-            paddingY={1.5}
+            className="text-xs px-3 py-1.5 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 font-medium"
           >
             Balance: {tokenBalance}
-          </Button>
-        </HStack>
+          </button>
+        </div>
         
-        <Box position="relative">
-          <Input
+        <div className="relative">
+          <input
             type="number"
             min="0"
             step="0.000001"
             placeholder="0.0"
             value={depositValue}
             onChange={(e) => setDepositValue(e.target.value)}
-            fontSize="lg"
-            height={16}
-            backgroundColor={inputBg}
-            border="1px"
-            borderColor={inputBorder}
-            borderRadius="xl"
-            color={textColor}
-            _placeholder={{ color: secondaryText }}
-            _focus={{
-              borderColor: "blue.500",
-              boxShadow: "0 0 0 1px var(--chakra-colors-blue-500)"
-            }}
-            paddingRight={20}
+            className={`w-full px-4 py-4 text-lg border rounded-xl transition-all duration-200 pr-20 ${
+              state.isDarkMode 
+                ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }`}
           />
-          <Box
-            position="absolute"
-            right={4}
-            top="50%"
-            transform="translateY(-50%)"
-          >
-            <Badge
-              backgroundColor={badgeBg}
-              color={secondaryText}
-              paddingX={2}
-              paddingY={1}
-              borderRadius="md"
-              fontSize="sm"
-              fontWeight="medium"
-            >
+          <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+            <span className={`text-sm font-medium px-2 py-1 rounded-md ${
+              state.isDarkMode 
+                ? 'bg-gray-600 text-gray-400' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
               {symbol || 'TOKEN'}
-            </Badge>
-          </Box>
-        </Box>
+            </span>
+          </div>
+        </div>
         
         {valueError && (
-          <Alert status="error" marginTop={2} borderRadius="lg">
-            <Box color="red.500" marginRight={2}>
-              <IoWarning />
-            </Box>
-            <Text fontSize="sm">{valueError}</Text>
-          </Alert>
+          <div className={`mt-2 p-3 rounded-lg border ${
+            state.isDarkMode 
+              ? 'bg-red-900/20 border-red-800' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center space-x-2">
+              <IoWarning className="w-4 h-4 text-red-500" />
+              <span className={`text-sm ${
+                state.isDarkMode ? 'text-red-400' : 'text-red-700'
+              }`}>
+                {valueError}
+              </span>
+            </div>
+          </div>
         )}
-      </Box>
+      </div>
 
       {!isApproved ? (
-        <Stack gap={3} align="stretch">
-          <Button
+        <div className="space-y-3">
+          <button
             onClick={unlockERC20}
             disabled={isLoading || approvePending}
-            loading={isLoading}
-            loadingText="Processing..."
-            background="linear-gradient(to right, #f56500, #dc2626)"
-            color="white"
-            height={16}
-            borderRadius="xl"
-            fontWeight="semibold"
-            _hover={{
-              background: "linear-gradient(to right, #ea580c, #b91c1c)",
-              transform: "translateY(-1px)",
-              boxShadow: "xl"
-            }}
-            _disabled={{
-              opacity: 0.5,
-              cursor: "not-allowed",
-              _hover: { transform: "none" }
-            }}
-            transition="all 0.2s"
-            boxShadow="lg"
+            className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-4 rounded-xl font-semibold hover:from-orange-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
           >
             {isLoading ? (
-              <HStack>
-                <Spinner size="sm" />
-                <Text>Processing...</Text>
-              </HStack>
+              <>
+                <svg className="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Processing...</span>
+              </>
             ) : (
-              <HStack>
-                <IoLockClosed />
-                <Text>Unlock {symbol || 'Token'}</Text>
-              </HStack>
+              <>
+                <IoLockClosed className="w-5 h-5" />
+                <span>Unlock {symbol || 'Token'}</span>
+              </>
             )}
-          </Button>
+          </button>
           
           {approvePending && (
-            <Alert status="info" borderRadius="lg">
-              <HStack>
-                <Spinner size="sm" />
-                <Text fontSize="sm">
+            <div className={`p-3 rounded-lg border ${
+              state.isDarkMode 
+                ? 'bg-blue-900/20 border-blue-800' 
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-center space-x-2">
+                <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className={`text-sm ${
+                  state.isDarkMode ? 'text-blue-400' : 'text-blue-700'
+                }`}>
                   Waiting for approval confirmation...
-                </Text>
-              </HStack>
-            </Alert>
+                </span>
+              </div>
+            </div>
           )}
-        </Stack>
+        </div>
       ) : (
-        <Button
+        <button
           onClick={validation}
           disabled={isLoading || !depositValue || parseFloat(depositValue) <= 0}
-          loading={isLoading}
-          loadingText="Processing..."
-          background="linear-gradient(to right, #059669, #0891b2)"
-          color="white"
-          height={16}
-          borderRadius="xl"
-          fontWeight="semibold"
-          _hover={{
-            background: "linear-gradient(to right, #047857, #0e7490)",
-            transform: "translateY(-1px)",
-            boxShadow: "xl"
-          }}
-          _disabled={{
-            opacity: 0.5,
-            cursor: "not-allowed",
-            _hover: { transform: "none" }
-          }}
-          transition="all 0.2s"
-          boxShadow="lg"
+          className="w-full bg-gradient-to-r from-green-500 to-cyan-600 text-white py-4 rounded-xl font-semibold hover:from-green-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
         >
           {isLoading ? (
-            <HStack>
-              <Spinner size="sm" />
-              <Text>Processing...</Text>
-            </HStack>
+            <>
+              <svg className="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Processing...</span>
+            </>
           ) : (
-            <HStack>
-              <IoAdd />
-              <Text>Deposit {symbol || 'Token'}</Text>
-            </HStack>
+            <>
+              <IoAdd className="w-5 h-5" />
+              <span>Deposit {symbol || 'Token'}</span>
+            </>
           )}
-        </Button>
+        </button>
       )}
-    </Stack>
+    </div>
   );
 }
 
