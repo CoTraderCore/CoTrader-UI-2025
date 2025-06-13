@@ -4,7 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Info, Plus, Minus, AlertCircle } from 'lucide-react';
 import { useDeFi } from '../../context/DeFiContext';
 import Web3Context from '../../context/Web3Context';
-import { APIEnpoint, SmartFundRegistryABIV9, SmartFundRegistryADDRESS } from '../../config.js';
+import { 
+  APIEnpoint, 
+  SmartFundRegistryABIV9, 
+  SmartFundRegistryADDRESS,
+  MainAssetName 
+} from '../../config.js';
 import setPending from '../../utils/setPending';
 import axios from 'axios';
 
@@ -22,7 +27,7 @@ const CreateFund = () => {
   const [formData, setFormData] = useState({
     fundName: '',
     percent: 20,
-    fundAsset: 'BASE',
+    fundAsset: MainAssetName,
     tradeVerification: false
   });
 
@@ -55,7 +60,7 @@ const CreateFund = () => {
       const contract = new web3.eth.Contract(SmartFundRegistryABIV9, SmartFundRegistryADDRESS);
       const percentMultiplier = 100;
       const block = await web3.eth.getBlockNumber();
-      const coreAsset = formData.fundAsset === 'BASE' ? ETH_ADDRESS : USD_ADDRESS;
+      const coreAsset = formData.fundAsset === MainAssetName ? ETH_ADDRESS : USD_ADDRESS;
 
       console.log('Creating fund:', {
         name: formData.fundName,
@@ -104,7 +109,7 @@ const CreateFund = () => {
     setFormData({
       fundName: '',
       percent: 20,
-      fundAsset: 'BASE',
+      fundAsset: MainAssetName,
       tradeVerification: false
     });
     setErrors({});
@@ -211,7 +216,7 @@ const CreateFund = () => {
                   }`}>
                     Performance Fee % *
                   </label>
-                  <InfoTooltip text="This is the % the fund manager earns for the profits earned, relative to main fund asset (BASE, USD or COT).">
+                  <InfoTooltip text="This is the % the fund manager earns for the profits earned, relative to main fund asset (ETH or USD).">
                     <Info className={`w-4 h-4 cursor-help ${
                       state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
                     }`} />
@@ -302,7 +307,7 @@ const CreateFund = () => {
                       : 'bg-white border-gray-300 text-gray-900'
                   } focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500`}
                 >
-                  <option value="BASE">BASE</option>
+                  <option value={MainAssetName}>{MainAssetName}</option>
                   <option value="USD">USD</option>
                 </select>
               </div>

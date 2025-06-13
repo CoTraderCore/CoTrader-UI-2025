@@ -2,7 +2,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { TrendingUp, ArrowUpDown, AlertTriangle, X } from 'lucide-react';
 import axios from 'axios';
-import { APIEnpoint, SmartFundABIV7, ERC20ABI, UNIRouterABI, QuickSwapRouter, WETH } from '../../config';
+import { APIEnpoint, SmartFundABIV7, ERC20ABI, UNIRouterABI, UniV2Router, WETH } from '../../config';
 import setPending from '../../utils/setPending';
 import Web3Context from '../../context/Web3Context';
 import { useDeFi } from '../../context/DeFiContext';
@@ -91,7 +91,7 @@ function Trade({ address, mainAsset, version, pending }) {
         const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
         const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
 
-        const router = new web3.eth.Contract(UNIRouterABI, QuickSwapRouter);
+        const router = new web3.eth.Contract(UNIRouterABI, UniV2Router);
         const data = await router.methods.getAmountsOut(src, [_from, _to]).call();
         price = data[1];
       } catch (e) {
