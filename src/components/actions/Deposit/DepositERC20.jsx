@@ -163,6 +163,7 @@ function DepositERC20({ mainAsset, address, pending, modalClose }) {
   };
 
   const depositERC20 = async () => {
+    console.log("DepositERC20 called with address:", address);
     try {
       const ercAssetDecimals = await ercAssetContract.methods.decimals().call();
       const amount = toWeiByDecimalsInput(ercAssetDecimals, depositValue);

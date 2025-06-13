@@ -33,6 +33,7 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
   }, [web3, accounts]);
 
   const validation = async () => {
+    console.log("Validation called with depositValue:", depositValue);
     setValueError('');
     setIsLoading(true);
 
@@ -44,7 +45,8 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
 
     try {
       const userBalance = await web3.eth.getBalance(accounts[0]);
-      if (Number(depositValue) > Number(fromWei(userBalance))) {
+      const weiBalance = web3.utils.fromWei(userBalance.toString(), 'ether')
+      if (Number(depositValue) > Number(weiBalance)) {
         setValueError(`Not enough ${mainAsset}`);
         setIsLoading(false);
         return;
@@ -59,8 +61,10 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
   };
 
   const depositETH = async () => {
+    console.log("DepositETH called with address:", address)
     try {
       const fundETH = new web3.eth.Contract(SmartFundABI, address);
+      console.log("depositValue",depositValue)
       const amount = toWei(depositValue.toString(), 'ether');
 
       let txCount = await axios.get(APIEnpoint + 'api/user-pending-count/' + accounts[0]);
