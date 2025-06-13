@@ -37,6 +37,14 @@ function Trade({ address, mainAsset, version, pending }) {
   const [slippage, setSlippage] = useState(5);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // Custom token import state
+  const [showCustomToken, setShowCustomToken] = useState(false);
+  const [customTokenAddress, setCustomTokenAddress] = useState('');
+  const [customTokenSymbol, setCustomTokenSymbol] = useState('');
+  const [customTokenDecimals, setCustomTokenDecimals] = useState('');
+  const [isLoadingCustomToken, setIsLoadingCustomToken] = useState(false);
+  const [customTokenError, setCustomTokenError] = useState('');
+
   // Check if current user is the fund manager
   const isManager = state.account && address && 
     state.account.toLowerCase() === state.selectedFund?.manager?.toLowerCase();
@@ -46,6 +54,12 @@ function Trade({ address, mainAsset, version, pending }) {
       initTokenData();
     }
   }, [show]);
+
+  useEffect(() => {
+    if (fromToken && toToken && fromAmount && tokens) {
+      updateToAmount(fromAmount);
+    }
+  }, [fromToken, toToken]);
 
   const initTokenData = async () => {
     let tokenList = [
@@ -79,6 +93,12 @@ function Trade({ address, mainAsset, version, pending }) {
     setError('');
     setIsLoading(false);
     setSlippage(5);
+    setIsCalculating(false);
+    setShowCustomToken(false);
+    setCustomTokenAddress('');
+    setCustomTokenSymbol('');
+    setCustomTokenDecimals('');
+    setCustomTokenError('');
   };
 
   const handleOverlayClick = (e) => {
@@ -91,6 +111,96 @@ function Trade({ address, mainAsset, version, pending }) {
     return tokens?.find(token => token.symbol === symbol);
   };
 
+  const fetchTokenMetadata = async (tokenAddress) => {
+    try {
+      if (!web3.utils.isAddress(tokenAddress)) {
+        throw new Error('Invalid token address');
+      }
+
+      const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
+      
+      const [symbol, decimals] = await Promise.all([
+        tokenContract.methods.symbol().call(),
+        tokenContract.methods.decimals().call()
+      ]);
+
+      return {
+        symbol: symbol,
+        decimals: parseInt(decimals),
+        address: tokenAddress.toLowerCase()
+      };
+    } catch (error) {
+      console.error('Error fetching token metadata:', error);
+      throw error;
+    }
+  };
+
+  const addCustomToken = async () => {
+    if (!customTokenAddress.trim()) {
+      setCustomTokenError('Please enter a token address');
+      return;
+    }
+
+    setIsLoadingCustomToken(true);
+    setCustomTokenError('');
+
+    try {
+      const tokenData = await fetchTokenMetadata(customTokenAddress.trim());
+      
+      // Check if token already exists
+      const existingToken = tokens?.find(token => 
+        token.address.toLowerCase() === tokenData.address.toLowerCase()
+      );
+
+      if (existingToken) {
+        setCustomTokenError('Token already exists in the list');
+        setIsLoadingCustomToken(false);
+        return;
+      }
+
+      // Add custom token to the list
+      const newToken = {
+        symbol: tokenData.symbol,
+        address: tokenData.address,
+        decimals: tokenData.decimals,
+        isCustom: true
+      };
+
+      setTokens(prevTokens => [...prevTokens, newToken]);
+      setSymbols(prevSymbols => [...prevSymbols, tokenData.symbol]);
+
+      // Reset custom token form
+      setCustomTokenAddress('');
+      setCustomTokenSymbol('');
+      setCustomTokenDecimals('');
+      setShowCustomToken(false);
+      
+      // Optionally set as selected token
+      setFromToken(tokenData.symbol);
+
+    } catch (error) {
+      console.error('Error adding custom token:', error);
+      setCustomTokenError(
+        error.message.includes('Invalid token address') 
+          ? 'Invalid token address' 
+          : 'Failed to load token data. Please check the address and try again.'
+      );
+    }
+
+    setIsLoadingCustomToken(false);
+  };
+
+  const removeCustomToken = (symbol) => {
+    setTokens(prevTokens => prevTokens.filter(token => 
+      !(token.symbol === symbol && token.isCustom)
+    ));
+    setSymbols(prevSymbols => prevSymbols.filter(s => s !== symbol));
+    
+    // Reset selection if removed token was selected
+    if (fromToken === symbol) setFromToken(MainAssetName);
+    if (toToken === symbol) setToToken('USDC');
+  };
+
   const getRate = async (from, to, amount, decimalsFrom, decimalsTo) => {
     let price = 0;
 
@@ -100,18 +210,22 @@ function Trade({ address, mainAsset, version, pending }) {
     }
 
     try {
-      // Convert to Wei
+      // Convert to Wei - fix potential precision issues
       const src = toWeiByDecimalsInput(decimalsFrom, amount.toString());
       
       // Validate that we have a valid Wei amount
-      if (!src || src === '0') {
+      if (!src || src === '0' || new BigNumber(src).isZero()) {
         console.log("Invalid source amount:", src);
         return price;
       }
 
-      // Handle ETH addresses
-      const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
-      const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
+      // Handle ETH addresses - normalize before comparison
+      const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'.toLowerCase() 
+        ? WETH.toLowerCase() 
+        : String(from).toLowerCase();
+      const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'.toLowerCase() 
+        ? WETH.toLowerCase() 
+        : String(to).toLowerCase();
 
       // Validate addresses
       if (!web3.utils.isAddress(_from) || !web3.utils.isAddress(_to)) {
@@ -120,23 +234,69 @@ function Trade({ address, mainAsset, version, pending }) {
       }
 
       // Same token check after address normalization
-      if (_from.toLowerCase() === _to.toLowerCase()) {
-        return price;
+      if (_from === _to) {
+        console.log("Same token after normalization");
+        return src; // Return the same amount in Wei if tokens are the same
       }
 
       const router = new web3.eth.Contract(UNIRouterABI, UniV2Router);
       
+      // First, try direct path
       const path = [_from, _to];
       console.log("Getting rate for path:", path, "amount:", src);
       
-      const data = await router.methods.getAmountsOut(src, path).call();
-      
-      console.log("Rate data:", data);
-      
-      if (data && data.length > 1 && data[1] && data[1] !== '0') {
-        price = data[1];
-      } else {
-        console.log("No valid rate returned");
+      try {
+        const data = await router.methods.getAmountsOut(src, path).call();
+        console.log("Direct path data:", data);
+        
+        if (data && data.length > 1 && data[1] && new BigNumber(data[1]).gt(0)) {
+          price = data[1];
+          console.log("Direct path successful:", price);
+          return price;
+        }
+      } catch (directError) {
+        console.log("Direct path failed:", directError.message);
+      }
+
+      // If direct path fails, try through WETH
+      if ((!price || price === '0') && 
+          _from !== WETH.toLowerCase() && 
+          _to !== WETH.toLowerCase()) {
+        
+        try {
+          console.log("Trying multi-hop route through WETH...");
+          const multiHopPath = [_from, WETH.toLowerCase(), _to];
+          const multiHopData = await router.methods.getAmountsOut(src, multiHopPath).call();
+          
+          console.log("Multi-hop data:", multiHopData);
+          if (multiHopData && multiHopData.length > 2 && new BigNumber(multiHopData[2]).gt(0)) {
+            price = multiHopData[2];
+            console.log("Multi-hop route successful:", price);
+            return price;
+          }
+        } catch (multiHopError) {
+          console.log("Multi-hop also failed:", multiHopError.message);
+        }
+      }
+
+      // If still no price and amount is large, try with smaller amount to test liquidity
+      if ((!price || price === '0') && parseFloat(amount) > 1) {
+        try {
+          console.log("Trying with smaller amount to test liquidity...");
+          const smallerAmount = (parseFloat(amount) * 0.1).toString(); // 10% of original
+          const smallerSrc = toWeiByDecimalsInput(decimalsFrom, smallerAmount);
+          
+          const testData = await router.methods.getAmountsOut(smallerSrc, path).call();
+          if (testData && testData.length > 1 && new BigNumber(testData[1]).gt(0)) {
+            // Scale up the result proportionally
+            const ratio = new BigNumber(src).div(smallerSrc);
+            price = new BigNumber(testData[1]).multipliedBy(ratio).toString();
+            console.log("Scaled rate calculated:", price);
+            return price;
+          }
+        } catch (testError) {
+          console.log("Smaller amount test failed:", testError.message);
+        }
       }
       
     } catch (e) {
@@ -146,67 +306,30 @@ function Trade({ address, mainAsset, version, pending }) {
         to: to,
         amount: amount,
         wethAddress: WETH,
-        routerAddress: UniV2Router
+        routerAddress: UniV2Router,
+        error: e
       });
-      
-      // Try alternative approaches
-      if (e.message.includes("INSUFFICIENT_LIQUIDITY") || 
-          e.message.includes("Parameter decoding error")) {
-        
-        // Option 1: Try with a different path (through WETH if not already)
-        if (from.toLowerCase() !== WETH.toLowerCase() && 
-            to.toLowerCase() !== WETH.toLowerCase()) {
-          try {
-            console.log("Trying multi-hop route through WETH...");
-            const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
-            const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
-            
-            const multiHopPath = [_from, WETH, _to];
-            const src = toWeiByDecimalsInput(decimalsFrom, amount.toString());
-            const multiHopData = await router.methods.getAmountsOut(src, multiHopPath).call();
-            
-            if (multiHopData && multiHopData.length > 2 && multiHopData[2] !== '0') {
-              price = multiHopData[2];
-              console.log("Multi-hop rate found:", price);
-            }
-          } catch (multiHopError) {
-            console.log("Multi-hop also failed:", multiHopError.message);
-          }
-        }
-        
-        // Option 2: Try with a smaller amount to test liquidity
-        if (!price || price === '0') {
-          try {
-            console.log("Trying with minimal amount to test pair existence...");
-            const minAmount = toWeiByDecimalsInput(decimalsFrom, "0.001");
-            const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
-            const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
-            
-            const testData = await router.methods.getAmountsOut(minAmount, [_from, _to]).call();
-            if (testData && testData.length > 1 && testData[1] !== '0') {
-              // Scale up the result
-              const testRate = parseFloat(testData[1]) / 0.001;
-              price = (testRate * parseFloat(amount)).toString();
-              console.log("Scaled rate calculated:", price);
-            }
-          } catch (testError) {
-            console.log("Test amount also failed:", testError.message);
-          }
-        }
-      }
-      
-      // If all else fails, return 0
-      if (!price || price === '0') {
-        console.log("No liquidity found for this pair");
-      }
     }
 
-    return price;
+    // If all methods fail
+    if (!price || price === '0') {
+      console.log("No liquidity found for this pair after all attempts");
+    }
+
+    return price || '0';
   };
 
   const updateToAmount = async (amount) => {
     if (!amount || !tokens || parseFloat(amount) <= 0) {
       setToAmount('');
+      setError('');
+      return;
+    }
+
+    // Don't calculate if tokens are the same
+    if (fromToken === toToken) {
+      setToAmount(amount);
+      setError('');
       return;
     }
 
@@ -216,30 +339,69 @@ function Trade({ address, mainAsset, version, pending }) {
     const fromTokenData = getTokenData(fromToken);
     const toTokenData = getTokenData(toToken);
 
-    if (fromTokenData && toTokenData) {
-      try {
-        const rate = await getRate(
-          fromTokenData.address,
-          toTokenData.address,
-          amount,
-          fromTokenData.decimals,
-          toTokenData.decimals
-        );
-
-        if (rate && rate !== '0') {
-          const result = fromWeiByDecimalsInput(toTokenData.decimals, rate);
-          setToAmount(result);
-        } else {
-          setToAmount('');
-          setError(`No liquidity available for ${fromToken}/${toToken} pair`);
-        }
-      } catch (e) {
-        console.log("Update amount error:", e);
-        setToAmount('');
-        setError('Unable to calculate exchange rate');
-      }
+    if (!fromTokenData || !toTokenData) {
+      setToAmount('');
+      setError('Token data not found');
+      setIsCalculating(false);
+      return;
     }
+
+    try {
+      const rate = await getRate(
+        fromTokenData.address,
+        toTokenData.address,
+        amount,
+        fromTokenData.decimals,
+        toTokenData.decimals
+      );
+
+      if (rate && rate !== '0' && !new BigNumber(rate).isZero()) {
+        const result = fromWeiByDecimalsInput(toTokenData.decimals, rate);
+        setToAmount(result);
+        setError(''); // Clear error on success
+      } else {
+        setToAmount('');
+        setError(`No liquidity available for ${fromToken}/${toToken} pair`);
+      }
+    } catch (e) {
+      console.log("Update amount error:", e);
+      setToAmount('');
+      setError('Unable to calculate exchange rate. Please try again.');
+    }
+    
     setIsCalculating(false);
+  };
+
+  const validateTokenPair = async (fromToken, toToken) => {
+    const fromTokenData = getTokenData(fromToken);
+    const toTokenData = getTokenData(toToken);
+    
+    if (!fromTokenData || !toTokenData) {
+      return { valid: false, error: 'Invalid token selection' };
+    }
+    
+    if (fromToken === toToken) {
+      return { valid: false, error: 'Cannot trade the same token' };
+    }
+    
+    // Test with a minimal amount to check if pair exists
+    try {
+      const testRate = await getRate(
+        fromTokenData.address,
+        toTokenData.address,
+        '1', // Test with 1 unit
+        fromTokenData.decimals,
+        toTokenData.decimals
+      );
+      
+      if (!testRate || testRate === '0') {
+        return { valid: false, error: `No trading pair available for ${fromToken}/${toToken}` };
+      }
+      
+      return { valid: true, error: null };
+    } catch (e) {
+      return { valid: false, error: 'Failed to validate trading pair' };
+    }
   };
 
   const checkFundBalance = async () => {
@@ -248,16 +410,22 @@ function Trade({ address, mainAsset, version, pending }) {
 
     let fundBalance;
     
-    if (fromTokenData.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-      fundBalance = await web3.eth.getBalance(address);
-      fundBalance = web3.utils.fromWei(String(fundBalance), 'ether');
-    } else {
-      const ERC20 = new web3.eth.Contract(ERC20ABI, fromTokenData.address);
-      fundBalance = await ERC20.methods.balanceOf(address).call();
-      fundBalance = fromWeiByDecimalsInput(fromTokenData.decimals, fundBalance);
-    }
+    try {
+      if (fromTokenData.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        fundBalance = await web3.eth.getBalance(address);
+        fundBalance = web3.utils.fromWei(String(fundBalance), 'ether');
+      } else {
+        const ERC20 = new web3.eth.Contract(ERC20ABI, fromTokenData.address);
+        fundBalance = await ERC20.methods.balanceOf(address).call();
+        fundBalance = fromWeiByDecimalsInput(fromTokenData.decimals, fundBalance);
+      }
 
-    return parseFloat(fundBalance) >= parseFloat(fromAmount);
+      console.log(`Fund balance for ${fromToken}:`, fundBalance);
+      return parseFloat(fundBalance) >= parseFloat(fromAmount);
+    } catch (e) {
+      console.log("Error checking fund balance:", e);
+      return false;
+    }
   };
 
   const executeTrade = async () => {
@@ -276,10 +444,23 @@ function Trade({ address, mainAsset, version, pending }) {
       return;
     }
 
+    if (!toAmount || parseFloat(toAmount) <= 0) {
+      setError('Invalid exchange rate. Please try a different amount or token pair.');
+      return;
+    }
+
     setError('');
     setIsLoading(true);
 
     try {
+      // Validate token pair
+      const validation = await validateTokenPair(fromToken, toToken);
+      if (!validation.valid) {
+        setError(validation.error);
+        setIsLoading(false);
+        return;
+      }
+
       const hasBalance = await checkFundBalance();
       if (!hasBalance) {
         setError(`Insufficient ${fromToken} balance in fund`);
@@ -300,7 +481,20 @@ function Trade({ address, mainAsset, version, pending }) {
       
       // Calculate minimum return with slippage
       const toAmountWei = toWeiByDecimalsInput(toTokenData.decimals, toAmount);
-      const minReturn = new BigNumber(toAmountWei).multipliedBy(100 - slippage).dividedBy(100).toString();
+      const minReturn = new BigNumber(toAmountWei)
+        .multipliedBy(100 - slippage)
+        .dividedBy(100)
+        .integerValue(BigNumber.ROUND_DOWN)
+        .toString();
+
+      console.log("Trade parameters:", {
+        from: fromTokenData.address,
+        amountIn: amountInWei,
+        to: toTokenData.address,
+        expectedOut: toAmountWei,
+        minReturn: minReturn,
+        slippage: slippage
+      });
 
       modalClose();
 
@@ -327,6 +521,7 @@ function Trade({ address, mainAsset, version, pending }) {
         })
         .on('error', (error) => {
           console.error('Trade error:', error);
+          setError('Trade failed. Please try again.');
           setIsLoading(false);
         });
 
@@ -338,10 +533,48 @@ function Trade({ address, mainAsset, version, pending }) {
   };
 
   const switchTokens = () => {
-    setFromToken(toToken);
-    setToToken(fromToken);
-    setFromAmount(toAmount);
-    setToAmount(fromAmount);
+    const newFromToken = toToken;
+    const newToToken = fromToken;
+    const newFromAmount = toAmount;
+    
+    setFromToken(newFromToken);
+    setToToken(newToToken);
+    setFromAmount(newFromAmount);
+    setToAmount('');
+    
+    // Recalculate exchange rate
+    if (newFromAmount && parseFloat(newFromAmount) > 0) {
+      setTimeout(() => updateToAmount(newFromAmount), 100);
+    }
+  };
+
+  const handleFromTokenChange = (newToken) => {
+    setFromToken(newToken);
+    setFromAmount('');
+    setToAmount('');
+    setError('');
+  };
+
+  const handleToTokenChange = (newToken) => {
+    setToToken(newToken);
+    setToAmount('');
+    setError('');
+    
+    // Recalculate if we have a from amount
+    if (fromAmount && parseFloat(fromAmount) > 0) {
+      setTimeout(() => updateToAmount(fromAmount), 100);
+    }
+  };
+
+  const handleFromAmountChange = (amount) => {
+    setFromAmount(amount);
+    
+    if (amount && parseFloat(amount) > 0) {
+      updateToAmount(amount);
+    } else {
+      setToAmount('');
+      setError('');
+    }
   };
 
   if (!show) {
@@ -425,32 +658,135 @@ function Trade({ address, mainAsset, version, pending }) {
 
           {/* From Token */}
           <div>
-            <label className={`block text-sm font-medium mb-2 ${
-              state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              From
-            </label>
-            <div className="flex space-x-2">
-              <select
-                value={fromToken}
-                onChange={(e) => setFromToken(e.target.value)}
-                className={`flex-1 p-3 border rounded-lg ${
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-sm font-medium ${
+                state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                From
+              </label>
+              <button
+                onClick={() => setShowCustomToken(!showCustomToken)}
+                className={`text-xs px-2 py-1 rounded transition-colors ${
                   state.isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
+                    ? 'text-blue-400 hover:bg-gray-700'
+                    : 'text-blue-600 hover:bg-blue-50'
                 }`}
               >
-                {symbols?.map(symbol => (
-                  <option key={symbol} value={symbol}>{symbol}</option>
-                ))}
-              </select>
+                {showCustomToken ? 'Hide Import' : '+ Import Token'}
+              </button>
+            </div>
+            
+            {/* Custom Token Import */}
+            {showCustomToken && (
+              <div className={`mb-4 p-4 border rounded-lg ${
+                state.isDarkMode 
+                  ? 'bg-gray-700/50 border-gray-600' 
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                <h4 className={`text-sm font-medium mb-3 ${
+                  state.isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Import Custom Token
+                </h4>
+                
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={customTokenAddress}
+                    onChange={(e) => setCustomTokenAddress(e.target.value)}
+                    placeholder="Token contract address (0x...)"
+                    className={`w-full p-2 text-sm border rounded ${
+                      state.isDarkMode
+                        ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                    }`}
+                  />
+                  
+                  {customTokenError && (
+                    <p className={`text-xs ${
+                      state.isDarkMode ? 'text-red-400' : 'text-red-600'
+                    }`}>
+                      {customTokenError}
+                    </p>
+                  )}
+                  
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={addCustomToken}
+                      disabled={isLoadingCustomToken || !customTokenAddress.trim()}
+                      className="flex-1 bg-blue-500 text-white px-3 py-2 text-sm rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1"
+                    >
+                      {isLoadingCustomToken ? (
+                        <>
+                          <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Loading...</span>
+                        </>
+                      ) : (
+                        <span>Import Token</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCustomToken(false);
+                        setCustomTokenAddress('');
+                        setCustomTokenError('');
+                      }}
+                      className={`px-3 py-2 text-sm rounded ${
+                        state.isDarkMode
+                          ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex space-x-2">
+              <div className="flex-1 relative">
+                <select
+                  value={fromToken}
+                  onChange={(e) => handleFromTokenChange(e.target.value)}
+                  className={`w-full p-3 border rounded-lg pr-8 ${
+                    state.isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {symbols?.map(symbol => {
+                    const tokenData = getTokenData(symbol);
+                    return (
+                      <option key={symbol} value={symbol}>
+                        {symbol} {tokenData?.isCustom ? '(Custom)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                
+                {/* Remove custom token button */}
+                {getTokenData(fromToken)?.isCustom && (
+                  <button
+                    onClick={() => removeCustomToken(fromToken)}
+                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                      state.isDarkMode
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                    title="Remove custom token"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
               <input
                 type="number"
                 value={fromAmount}
-                onChange={(e) => {
-                  setFromAmount(e.target.value);
-                  updateToAmount(e.target.value);
-                }}
+                onChange={(e) => handleFromAmountChange(e.target.value)}
                 placeholder="0.0"
                 className={`flex-1 p-3 border rounded-lg ${
                   state.isDarkMode
@@ -465,11 +801,12 @@ function Trade({ address, mainAsset, version, pending }) {
           <div className="flex justify-center">
             <button
               onClick={switchTokens}
+              disabled={isCalculating}
               className={`p-2 rounded-full border-2 transition-colors ${
                 state.isDarkMode
                   ? 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-gray-300'
                   : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-600'
-              }`}
+              } ${isCalculating ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <ArrowUpDown className="w-4 h-4" />
             </button>
@@ -483,31 +820,62 @@ function Trade({ address, mainAsset, version, pending }) {
               To
             </label>
             <div className="flex space-x-2">
-              <select
-                value={toToken}
-                onChange={(e) => setToToken(e.target.value)}
-                className={`flex-1 p-3 border rounded-lg ${
-                  state.isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-              >
-                {symbols?.map(symbol => (
-                  <option key={symbol} value={symbol}>{symbol}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                value={toAmount}
-                onChange={(e) => setToAmount(e.target.value)}
-                placeholder="0.0"
-                className={`flex-1 p-3 border rounded-lg ${
-                  state.isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                } ${isCalculating ? 'opacity-50' : ''}`}
-                readOnly
-              />
+              <div className="flex-1 relative">
+                <select
+                  value={toToken}
+                  onChange={(e) => handleToTokenChange(e.target.value)}
+                  className={`w-full p-3 border rounded-lg pr-8 ${
+                    state.isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {symbols?.map(symbol => {
+                    const tokenData = getTokenData(symbol);
+                    return (
+                      <option key={symbol} value={symbol}>
+                        {symbol} {tokenData?.isCustom ? '(Custom)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                
+                {/* Remove custom token button */}
+                {getTokenData(toToken)?.isCustom && (
+                  <button
+                    onClick={() => removeCustomToken(toToken)}
+                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                      state.isDarkMode
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                    title="Remove custom token"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <div className="relative flex-1">
+                <input
+                  type="number"
+                  value={toAmount}
+                  placeholder={isCalculating ? "Calculating..." : "0.0"}
+                  className={`w-full p-3 border rounded-lg ${
+                    state.isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                  } ${isCalculating ? 'opacity-50' : ''}`}
+                  readOnly
+                />
+                {isCalculating && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -571,7 +939,7 @@ function Trade({ address, mainAsset, version, pending }) {
           {/* Trade Button */}
           <button
             onClick={executeTrade}
-            disabled={isLoading || !isManager || !fromAmount || !toAmount}
+            disabled={isLoading || !isManager || !fromAmount || !toAmount || isCalculating}
             className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
           >
             {isLoading ? (
