@@ -2,7 +2,15 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { TrendingUp, ArrowUpDown, AlertTriangle, X } from 'lucide-react';
 import axios from 'axios';
-import { APIEnpoint, SmartFundABIV7, ERC20ABI, UNIRouterABI, UniV2Router, WETH } from '../../config';
+import { 
+  APIEnpoint, 
+  SmartFundABIV7, 
+  ERC20ABI, 
+  UNIRouterABI, 
+  UniV2Router, 
+  WETH,
+  NeworkID
+} from '../../config';
 import setPending from '../../utils/setPending';
 import Web3Context from '../../context/Web3Context';
 import { useDeFi } from '../../context/DeFiContext';
@@ -45,7 +53,7 @@ function Trade({ address, mainAsset, version, pending }) {
     let symbolList = ['BASE'];
 
     try {
-      for (const [, value] of Object.entries(tokensList)) {
+      for (const [, value] of Object.entries(tokensList(NeworkID))) {
         symbolList.push(value.symbol);
         tokenList.push({
           symbol: value.symbol,

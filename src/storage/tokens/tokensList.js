@@ -1,5 +1,11 @@
-import maticTokens from './maticTokens.js';
+import baseTokens from './baseTokens.js';
 
-const tokensList = maticTokens
+function tokensList(netID) {
+    if (netID === 137) {
+        return baseTokens;
+    }else{
+        return []
+    }
+}
 
 export default tokensList;
