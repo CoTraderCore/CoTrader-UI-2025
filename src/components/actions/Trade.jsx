@@ -45,6 +45,14 @@ function Trade({ address, mainAsset, version, pending }) {
   const [isLoadingCustomToken, setIsLoadingCustomToken] = useState(false);
   const [customTokenError, setCustomTokenError] = useState('');
 
+  // Token search state
+  const [fromTokenSearch, setFromTokenSearch] = useState('');
+  const [toTokenSearch, setToTokenSearch] = useState('');
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   // Check if current user is the fund manager
   const isManager = state.account && address && 
     state.account.toLowerCase() === state.selectedFund?.manager?.toLowerCase();
@@ -99,6 +107,11 @@ function Trade({ address, mainAsset, version, pending }) {
     setCustomTokenSymbol('');
     setCustomTokenDecimals('');
     setCustomTokenError('');
+    setFromTokenSearch('');
+    setToTokenSearch('');
+    setShowFromDropdown(false);
+    setShowToDropdown(false);
+    setSearchResults([]);
   };
 
   const handleOverlayClick = (e) => {
@@ -199,6 +212,94 @@ function Trade({ address, mainAsset, version, pending }) {
     // Reset selection if removed token was selected
     if (fromToken === symbol) setFromToken(MainAssetName);
     if (toToken === symbol) setToToken('USDC');
+  };
+
+  // Token search functionality
+  const searchTokens = async (query) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    
+    try {
+      // First, search in existing tokens
+      const existingMatches = tokens?.filter(token => 
+        token.symbol.toLowerCase().includes(query.toLowerCase()) ||
+        token.address.toLowerCase().includes(query.toLowerCase())
+      ) || [];
+
+      let results = [...existingMatches];
+
+      // If query looks like an address, try to fetch token data
+      if (web3.utils.isAddress(query)) {
+        try {
+          const tokenData = await fetchTokenMetadata(query);
+          
+          // Check if this token already exists
+          const exists = tokens?.some(token => 
+            token.address.toLowerCase() === tokenData.address.toLowerCase()
+          );
+
+          if (!exists) {
+            results.push({
+              ...tokenData,
+              isNewToken: true
+            });
+          }
+        } catch (e) {
+          console.log('Token search by address failed:', e);
+        }
+      }
+
+      // You could also add external API search here for popular tokens
+      // For example, searching CoinGecko, 1inch, or other token lists
+
+      setSearchResults(results.slice(0, 10)); // Limit to 10 results
+    } catch (error) {
+      console.error('Token search error:', error);
+      setSearchResults([]);
+    }
+
+    setIsSearching(false);
+  };
+
+  const selectSearchResult = (tokenData, isFromToken) => {
+    if (tokenData.isNewToken) {
+      // Add new token to the list
+      const newToken = {
+        symbol: tokenData.symbol,
+        address: tokenData.address,
+        decimals: tokenData.decimals,
+        isCustom: true
+      };
+
+      setTokens(prevTokens => [...prevTokens, newToken]);
+      setSymbols(prevSymbols => [...prevSymbols, tokenData.symbol]);
+    }
+
+    if (isFromToken) {
+      setFromToken(tokenData.symbol);
+      setFromTokenSearch('');
+      setShowFromDropdown(false);
+      handleFromTokenChange(tokenData.symbol);
+    } else {
+      setToToken(tokenData.symbol);
+      setToTokenSearch('');
+      setShowToDropdown(false);
+      handleToTokenChange(tokenData.symbol);
+    }
+
+    setSearchResults([]);
+  };
+
+  const getFilteredTokens = (searchQuery) => {
+    if (!searchQuery) return symbols || [];
+    
+    return symbols?.filter(symbol => 
+      symbol.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
   };
 
   const getRate = async (from, to, amount, decimalsFrom, decimalsTo) => {
@@ -749,30 +850,205 @@ function Trade({ address, mainAsset, version, pending }) {
             
             <div className="flex space-x-2">
               <div className="flex-1 relative">
-                <select
-                  value={fromToken}
-                  onChange={(e) => handleFromTokenChange(e.target.value)}
-                  className={`w-full p-3 border rounded-lg pr-8 ${
+                {/* Show selected token or search input */}
+                {fromToken && !showFromDropdown ? (
+                  /* Selected Token Chip */
+                  <div className={`flex items-center justify-between p-3 border rounded-lg ${
                     state.isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {symbols?.map(symbol => {
-                    const tokenData = getTokenData(symbol);
-                    return (
-                      <option key={symbol} value={symbol}>
-                        {symbol} {tokenData?.isCustom ? '(Custom)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+                      ? 'bg-gray-700 border-gray-600'
+                      : 'bg-white border-gray-300'
+                  }`}>
+                    <div className="flex items-center space-x-2">
+                      <span className={`font-medium ${
+                        state.isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {getTokenData(fromToken)?.symbol || fromToken}
+                      </span>
+                      {getTokenData(fromToken)?.isCustom && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          state.isDarkMode 
+                            ? 'bg-blue-600 text-blue-200' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          Custom
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setFromTokenSearch('');
+                        setShowFromDropdown(true);
+                        setSearchResults([]);
+                      }}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors ${
+                        state.isDarkMode
+                          ? 'bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800'
+                      }`}
+                      title="Change token"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  /* Search Input */
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={fromTokenSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFromTokenSearch(value);
+                        
+                        // If clearing the field, reset search results and show all tokens
+                        if (value === '') {
+                          setSearchResults([]);
+                        } else {
+                          searchTokens(value);
+                        }
+                      }}
+                      onFocus={() => {
+                        setShowFromDropdown(true);
+                        if (!fromTokenSearch) {
+                          setSearchResults([]);
+                        }
+                      }}
+                      onBlur={() => {
+                        // Delay hiding dropdown to allow clicks
+                        setTimeout(() => {
+                          // If no token was selected, revert to showing selected token
+                          if (!fromTokenSearch) {
+                            setShowFromDropdown(false);
+                          }
+                        }, 200);
+                      }}
+                      placeholder="Search tokens..."
+                      className={`w-full p-3 border rounded-lg ${
+                        state.isDarkMode
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      }`}
+                      autoFocus
+                    />
+                    
+                    {/* Dropdown Results */}
+                    {showFromDropdown && (
+                      <div className={`absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto ${
+                        state.isDarkMode
+                          ? 'bg-gray-700 border-gray-600'
+                          : 'bg-white border-gray-300'
+                      }`}>
+                        {isSearching && (
+                          <div className="p-3 text-center">
+                            <svg className="animate-spin w-4 h-4 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          </div>
+                        )}
+                        
+                        {/* Search Results */}
+                        {searchResults.length > 0 && (
+                          <div>
+                            <div className={`px-3 py-2 text-xs font-medium border-b ${
+                              state.isDarkMode
+                                ? 'text-gray-400 border-gray-600'
+                                : 'text-gray-500 border-gray-200'
+                            }`}>
+                              Search Results
+                            </div>
+                            {searchResults.map((token, index) => (
+                              <button
+                                key={`search-${index}`}
+                                onClick={() => selectSearchResult(token, true)}
+                                className={`w-full text-left px-3 py-2 hover:bg-opacity-50 ${
+                                  state.isDarkMode
+                                    ? 'hover:bg-gray-600 text-white'
+                                    : 'hover:bg-gray-100 text-gray-900'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium">{token.symbol}</span>
+                                  <span className={`text-xs ${
+                                    state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                  }`}>
+                                    {token.isNewToken ? 'New' : token.isCustom ? 'Custom' : 'Listed'}
+                                  </span>
+                                </div>
+                                <div className={`text-xs ${
+                                  state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                }`}>
+                                  {token.address.slice(0, 6)}...{token.address.slice(-4)}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Existing Tokens */}
+                        {(!fromTokenSearch || getFilteredTokens(fromTokenSearch).length > 0) && (
+                          <div>
+                            {searchResults.length > 0 && (
+                              <div className={`px-3 py-2 text-xs font-medium border-b ${
+                                state.isDarkMode
+                                  ? 'text-gray-400 border-gray-600'
+                                  : 'text-gray-500 border-gray-200'
+                              }`}>
+                                Available Tokens
+                              </div>
+                            )}
+                            {(fromTokenSearch ? getFilteredTokens(fromTokenSearch) : symbols || []).slice(0, 8).map(symbol => {
+                              const tokenData = getTokenData(symbol);
+                              return (
+                                <button
+                                  key={symbol}
+                                  onClick={() => {
+                                    setFromToken(symbol);
+                                    setFromTokenSearch('');
+                                    setShowFromDropdown(false);
+                                    setSearchResults([]);
+                                    handleFromTokenChange(symbol);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 hover:bg-opacity-50 ${
+                                    state.isDarkMode
+                                      ? 'hover:bg-gray-600 text-white'
+                                      : 'hover:bg-gray-100 text-gray-900'
+                                  } ${fromToken === symbol ? 'bg-blue-500 bg-opacity-20' : ''}`}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">{symbol}</span>
+                                    {tokenData?.isCustom && (
+                                      <span className={`text-xs ${
+                                        state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                      }`}>
+                                        Custom
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
+                        {/* No Results */}
+                        {fromTokenSearch && searchResults.length === 0 && getFilteredTokens(fromTokenSearch).length === 0 && !isSearching && (
+                          <div className={`p-3 text-center text-sm ${
+                            state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            No tokens found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 
-                {/* Remove custom token button */}
-                {getTokenData(fromToken)?.isCustom && (
+                {/* Remove custom token button (only show when token chip is displayed) */}
+                {fromToken && !showFromDropdown && getTokenData(fromToken)?.isCustom && (
                   <button
                     onClick={() => removeCustomToken(fromToken)}
-                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                    className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
                       state.isDarkMode
                         ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'bg-red-500 text-white hover:bg-red-600'
@@ -821,30 +1097,205 @@ function Trade({ address, mainAsset, version, pending }) {
             </label>
             <div className="flex space-x-2">
               <div className="flex-1 relative">
-                <select
-                  value={toToken}
-                  onChange={(e) => handleToTokenChange(e.target.value)}
-                  className={`w-full p-3 border rounded-lg pr-8 ${
+                {/* Show selected token or search input */}
+                {toToken && !showToDropdown ? (
+                  /* Selected Token Chip */
+                  <div className={`flex items-center justify-between p-3 border rounded-lg ${
                     state.isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {symbols?.map(symbol => {
-                    const tokenData = getTokenData(symbol);
-                    return (
-                      <option key={symbol} value={symbol}>
-                        {symbol} {tokenData?.isCustom ? '(Custom)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+                      ? 'bg-gray-700 border-gray-600'
+                      : 'bg-white border-gray-300'
+                  }`}>
+                    <div className="flex items-center space-x-2">
+                      <span className={`font-medium ${
+                        state.isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {getTokenData(toToken)?.symbol || toToken}
+                      </span>
+                      {getTokenData(toToken)?.isCustom && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          state.isDarkMode 
+                            ? 'bg-blue-600 text-blue-200' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          Custom
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setToTokenSearch('');
+                        setShowToDropdown(true);
+                        setSearchResults([]);
+                      }}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors ${
+                        state.isDarkMode
+                          ? 'bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800'
+                      }`}
+                      title="Change token"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  /* Search Input */
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={toTokenSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setToTokenSearch(value);
+                        
+                        // If clearing the field, reset search results and show all tokens
+                        if (value === '') {
+                          setSearchResults([]);
+                        } else {
+                          searchTokens(value);
+                        }
+                      }}
+                      onFocus={() => {
+                        setShowToDropdown(true);
+                        if (!toTokenSearch) {
+                          setSearchResults([]);
+                        }
+                      }}
+                      onBlur={() => {
+                        // Delay hiding dropdown to allow clicks
+                        setTimeout(() => {
+                          // If no token was selected, revert to showing selected token
+                          if (!toTokenSearch) {
+                            setShowToDropdown(false);
+                          }
+                        }, 200);
+                      }}
+                      placeholder="Search tokens..."
+                      className={`w-full p-3 border rounded-lg ${
+                        state.isDarkMode
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      }`}
+                      autoFocus
+                    />
+                    
+                    {/* Dropdown Results */}
+                    {showToDropdown && (
+                      <div className={`absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto ${
+                        state.isDarkMode
+                          ? 'bg-gray-700 border-gray-600'
+                          : 'bg-white border-gray-300'
+                      }`}>
+                        {isSearching && (
+                          <div className="p-3 text-center">
+                            <svg className="animate-spin w-4 h-4 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          </div>
+                        )}
+                        
+                        {/* Search Results */}
+                        {searchResults.length > 0 && (
+                          <div>
+                            <div className={`px-3 py-2 text-xs font-medium border-b ${
+                              state.isDarkMode
+                                ? 'text-gray-400 border-gray-600'
+                                : 'text-gray-500 border-gray-200'
+                            }`}>
+                              Search Results
+                            </div>
+                            {searchResults.map((token, index) => (
+                              <button
+                                key={`search-${index}`}
+                                onClick={() => selectSearchResult(token, false)}
+                                className={`w-full text-left px-3 py-2 hover:bg-opacity-50 ${
+                                  state.isDarkMode
+                                    ? 'hover:bg-gray-600 text-white'
+                                    : 'hover:bg-gray-100 text-gray-900'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium">{token.symbol}</span>
+                                  <span className={`text-xs ${
+                                    state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                  }`}>
+                                    {token.isNewToken ? 'New' : token.isCustom ? 'Custom' : 'Listed'}
+                                  </span>
+                                </div>
+                                <div className={`text-xs ${
+                                  state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                }`}>
+                                  {token.address.slice(0, 6)}...{token.address.slice(-4)}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Existing Tokens */}
+                        {(!toTokenSearch || getFilteredTokens(toTokenSearch).length > 0) && (
+                          <div>
+                            {searchResults.length > 0 && (
+                              <div className={`px-3 py-2 text-xs font-medium border-b ${
+                                state.isDarkMode
+                                  ? 'text-gray-400 border-gray-600'
+                                  : 'text-gray-500 border-gray-200'
+                              }`}>
+                                Available Tokens
+                              </div>
+                            )}
+                            {(toTokenSearch ? getFilteredTokens(toTokenSearch) : symbols || []).slice(0, 8).map(symbol => {
+                              const tokenData = getTokenData(symbol);
+                              return (
+                                <button
+                                  key={symbol}
+                                  onClick={() => {
+                                    setToToken(symbol);
+                                    setToTokenSearch('');
+                                    setShowToDropdown(false);
+                                    setSearchResults([]);
+                                    handleToTokenChange(symbol);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 hover:bg-opacity-50 ${
+                                    state.isDarkMode
+                                      ? 'hover:bg-gray-600 text-white'
+                                      : 'hover:bg-gray-100 text-gray-900'
+                                  } ${toToken === symbol ? 'bg-blue-500 bg-opacity-20' : ''}`}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">{symbol}</span>
+                                    {tokenData?.isCustom && (
+                                      <span className={`text-xs ${
+                                        state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                      }`}>
+                                        Custom
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
+                        {/* No Results */}
+                        {toTokenSearch && searchResults.length === 0 && getFilteredTokens(toTokenSearch).length === 0 && !isSearching && (
+                          <div className={`p-3 text-center text-sm ${
+                            state.isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            No tokens found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 
-                {/* Remove custom token button */}
-                {getTokenData(toToken)?.isCustom && (
+                {/* Remove custom token button (only show when token chip is displayed) */}
+                {toToken && !showToDropdown && getTokenData(toToken)?.isCustom && (
                   <button
                     onClick={() => removeCustomToken(toToken)}
-                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                    className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
                       state.isDarkMode
                         ? 'bg-red-600 text-white hover:bg-red-700'
                         : 'bg-red-500 text-white hover:bg-red-600'
