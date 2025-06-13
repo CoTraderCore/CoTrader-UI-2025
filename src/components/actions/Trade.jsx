@@ -10,7 +10,8 @@ import {
   UniV2Router, 
   WETH,
   NeworkID,
-  MainAssetName
+  MainAssetName,
+  UNI_V2_DEX_TYPE
 } from '../../config';
 import setPending from '../../utils/setPending';
 import Web3Context from '../../context/Web3Context';
@@ -600,12 +601,13 @@ function Trade({ address, mainAsset, version, pending }) {
       modalClose();
 
       // Execute trade
+      // SHOULD BE ALSO FOR TRADE VERIFIACTION TRUE
       smartFund.methods
         .trade(
           fromTokenData.address,
           amountInWei,
           toTokenData.address,
-          4, // QuickSwap exchange type
+          UNI_V2_DEX_TYPE, // exchange type dependse on network
           [], // proof (empty for now)
           [], // positions (empty for now)
           "0x", // additional data

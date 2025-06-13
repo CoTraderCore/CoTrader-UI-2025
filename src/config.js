@@ -5,6 +5,7 @@ export const SupportedAssets = ["BASE", "ETH", "BNB", "MATIC"]
 export const MAX_TOKENS = 20
 
 // MATIC network
+export const UNI_V2_DEX_TYPE = 4
 export const MainAssetName = "MATIC"
 export const NeworkID = 137
 export const SmartFundRegistryADDRESS = '0x992F6c414A6DA6A7470dfB9D61eFc6639e9fbb0E'
