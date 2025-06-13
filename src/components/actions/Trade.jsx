@@ -9,7 +9,8 @@ import {
   UNIRouterABI, 
   UniV2Router, 
   WETH,
-  NeworkID
+  NeworkID,
+  MainAssetName
 } from '../../config';
 import setPending from '../../utils/setPending';
 import Web3Context from '../../context/Web3Context';
@@ -27,7 +28,7 @@ function Trade({ address, mainAsset, version, pending }) {
   const [error, setError] = useState('');
   
   // Trade state
-  const [fromToken, setFromToken] = useState('BASE');
+  const [fromToken, setFromToken] = useState(MainAssetName);
   const [toToken, setToToken] = useState('USDC');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
@@ -48,9 +49,9 @@ function Trade({ address, mainAsset, version, pending }) {
 
   const initTokenData = async () => {
     let tokenList = [
-      { symbol: "BASE", address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", decimals: 18 },
+      { symbol: MainAssetName, address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", decimals: 18 },
     ];
-    let symbolList = ['BASE'];
+    let symbolList = [MainAssetName];
 
     try {
       for (const [, value] of Object.entries(tokensList(NeworkID))) {
@@ -71,7 +72,7 @@ function Trade({ address, mainAsset, version, pending }) {
 
   const modalClose = () => {
     setShow(false);
-    setFromToken('BASE');
+    setFromToken(MainAssetName);
     setToToken('USDC');
     setFromAmount('');
     setToAmount('');
@@ -93,17 +94,110 @@ function Trade({ address, mainAsset, version, pending }) {
   const getRate = async (from, to, amount, decimalsFrom, decimalsTo) => {
     let price = 0;
 
-    if (amount > 0 && from !== to) {
-      try {
-        const src = toWeiByDecimalsInput(decimalsFrom, amount.toString());
-        const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
-        const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
+    // Early return conditions
+    if (!amount || parseFloat(amount) <= 0 || from === to) {
+      return price;
+    }
 
-        const router = new web3.eth.Contract(UNIRouterABI, UniV2Router);
-        const data = await router.methods.getAmountsOut(src, [_from, _to]).call();
+    try {
+      // Convert to Wei
+      const src = toWeiByDecimalsInput(decimalsFrom, amount.toString());
+      
+      // Validate that we have a valid Wei amount
+      if (!src || src === '0') {
+        console.log("Invalid source amount:", src);
+        return price;
+      }
+
+      // Handle ETH addresses
+      const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
+      const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
+
+      // Validate addresses
+      if (!web3.utils.isAddress(_from) || !web3.utils.isAddress(_to)) {
+        console.log("Invalid token addresses:", { _from, _to });
+        return price;
+      }
+
+      // Same token check after address normalization
+      if (_from.toLowerCase() === _to.toLowerCase()) {
+        return price;
+      }
+
+      const router = new web3.eth.Contract(UNIRouterABI, UniV2Router);
+      
+      const path = [_from, _to];
+      console.log("Getting rate for path:", path, "amount:", src);
+      
+      const data = await router.methods.getAmountsOut(src, path).call();
+      
+      console.log("Rate data:", data);
+      
+      if (data && data.length > 1 && data[1] && data[1] !== '0') {
         price = data[1];
-      } catch (e) {
-        console.log("Rate error:", e);
+      } else {
+        console.log("No valid rate returned");
+      }
+      
+    } catch (e) {
+      console.log("Rate error details:", {
+        message: e.message,
+        from: from,
+        to: to,
+        amount: amount,
+        wethAddress: WETH,
+        routerAddress: UniV2Router
+      });
+      
+      // Try alternative approaches
+      if (e.message.includes("INSUFFICIENT_LIQUIDITY") || 
+          e.message.includes("Parameter decoding error")) {
+        
+        // Option 1: Try with a different path (through WETH if not already)
+        if (from.toLowerCase() !== WETH.toLowerCase() && 
+            to.toLowerCase() !== WETH.toLowerCase()) {
+          try {
+            console.log("Trying multi-hop route through WETH...");
+            const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
+            const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
+            
+            const multiHopPath = [_from, WETH, _to];
+            const src = toWeiByDecimalsInput(decimalsFrom, amount.toString());
+            const multiHopData = await router.methods.getAmountsOut(src, multiHopPath).call();
+            
+            if (multiHopData && multiHopData.length > 2 && multiHopData[2] !== '0') {
+              price = multiHopData[2];
+              console.log("Multi-hop rate found:", price);
+            }
+          } catch (multiHopError) {
+            console.log("Multi-hop also failed:", multiHopError.message);
+          }
+        }
+        
+        // Option 2: Try with a smaller amount to test liquidity
+        if (!price || price === '0') {
+          try {
+            console.log("Trying with minimal amount to test pair existence...");
+            const minAmount = toWeiByDecimalsInput(decimalsFrom, "0.001");
+            const _from = String(from).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : from;
+            const _to = String(to).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? WETH : to;
+            
+            const testData = await router.methods.getAmountsOut(minAmount, [_from, _to]).call();
+            if (testData && testData.length > 1 && testData[1] !== '0') {
+              // Scale up the result
+              const testRate = parseFloat(testData[1]) / 0.001;
+              price = (testRate * parseFloat(amount)).toString();
+              console.log("Scaled rate calculated:", price);
+            }
+          } catch (testError) {
+            console.log("Test amount also failed:", testError.message);
+          }
+        }
+      }
+      
+      // If all else fails, return 0
+      if (!price || price === '0') {
+        console.log("No liquidity found for this pair");
       }
     }
 
@@ -111,9 +205,14 @@ function Trade({ address, mainAsset, version, pending }) {
   };
 
   const updateToAmount = async (amount) => {
-    if (!amount || !tokens) return;
+    if (!amount || !tokens || parseFloat(amount) <= 0) {
+      setToAmount('');
+      return;
+    }
 
     setIsCalculating(true);
+    setError(''); // Clear any previous errors
+    
     const fromTokenData = getTokenData(fromToken);
     const toTokenData = getTokenData(toToken);
 
@@ -127,12 +226,17 @@ function Trade({ address, mainAsset, version, pending }) {
           toTokenData.decimals
         );
 
-        if (rate) {
+        if (rate && rate !== '0') {
           const result = fromWeiByDecimalsInput(toTokenData.decimals, rate);
           setToAmount(result);
+        } else {
+          setToAmount('');
+          setError(`No liquidity available for ${fromToken}/${toToken} pair`);
         }
       } catch (e) {
         console.log("Update amount error:", e);
+        setToAmount('');
+        setError('Unable to calculate exchange rate');
       }
     }
     setIsCalculating(false);
@@ -146,7 +250,7 @@ function Trade({ address, mainAsset, version, pending }) {
     
     if (fromTokenData.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
       fundBalance = await web3.eth.getBalance(address);
-      fundBalance = web3.utils.fromWei(fundBalance);
+      fundBalance = web3.utils.fromWei(String(fundBalance), 'ether');
     } else {
       const ERC20 = new web3.eth.Contract(ERC20ABI, fromTokenData.address);
       fundBalance = await ERC20.methods.balanceOf(address).call();
@@ -318,8 +422,6 @@ function Trade({ address, mainAsset, version, pending }) {
               </div>
             </div>
           )}
-
-
 
           {/* From Token */}
           <div>

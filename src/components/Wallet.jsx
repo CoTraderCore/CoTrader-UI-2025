@@ -1,8 +1,9 @@
 // components/Wallet.js
 import React, { useState, useContext, useEffect } from "react";
-import { Wallet as WalletIcon, User, AlertCircle, Loader } from "lucide-react";
+import { Wallet as WalletIcon, User, AlertCircle, Loader, AlertTriangle } from "lucide-react";
 import getWeb3 from "../models/getWeb3";
 import Web3Context from "../context/Web3Context";
+import { MainAssetName, NeworkID } from "../config";
 
 const connectWallet = async (setWeb3, setAccounts, setNetId, setIsConnecting, setError) => {
   try {
@@ -17,7 +18,7 @@ const connectWallet = async (setWeb3, setAccounts, setNetId, setIsConnecting, se
     const response = await getWeb3();
     setWeb3(response);
     
-    const netId = await response.eth.net.getId();
+    const netId = Number(await response.eth.net.getId());
     setNetId(netId);
     
     const accounts = await response.eth.getAccounts();
@@ -39,6 +40,7 @@ const Wallet = () => {
   const context = useContext(Web3Context);
   const web3 = context?.web3;
   const accounts = context?.accounts;
+  const netId = context?.netId;
   const setWeb3 = context?.setWeb3;
   const setAccounts = context?.setAccounts;
   const setNetId = context?.setNetId;
@@ -76,31 +78,71 @@ const Wallet = () => {
   }, [error]);
 
   const isConnected = web3 && accounts && accounts.length > 0;
+  const isWrongNetwork = web3 && netId && netId !== NeworkID;
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Wallet debug:', {
+      web3: !!web3,
+      netId,
+      NeworkID,
+      isWrongNetwork,
+      isConnected
+    });
+  }, [web3, netId, isConnected, isWrongNetwork]);
 
   return (
     <div className="relative inline-block">
       {isConnected ? (
-        <button
-          className={`
-            flex items-center justify-center gap-2 px-4 py-2.5 min-w-[120px]
-            bg-gradient-to-r from-green-500 to-green-600 
-            hover:from-green-600 hover:to-green-700
-            text-white font-semibold text-sm rounded-lg
-            transition-all duration-300 ease-in-out
-            shadow-lg shadow-green-500/30 hover:shadow-green-500/40
-            hover:-translate-y-0.5 hover:shadow-xl
-            disabled:opacity-70 disabled:cursor-not-allowed
-            disabled:hover:transform-none disabled:hover:shadow-lg
-          `}
-          onMouseEnter={() => setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
-          onClick={disconnectWallet}
-          disabled={isConnecting}
-        >
-          <User size={14} />
-          <span>{formatAddress(accounts[0])}</span>
-        </button>
+        <>
+          {isWrongNetwork ? (
+            // Wrong Network Button
+            <button
+              className={`
+                flex items-center justify-center gap-2 px-4 py-2.5 min-w-[140px]
+                bg-gradient-to-r from-red-500 to-red-600 
+                hover:from-red-600 hover:to-red-700
+                text-white font-semibold text-sm rounded-lg
+                transition-all duration-300 ease-in-out
+                shadow-lg shadow-red-500/30 hover:shadow-red-500/40
+                hover:-translate-y-0.5 hover:shadow-xl
+                disabled:opacity-70 disabled:cursor-not-allowed
+                disabled:hover:transform-none disabled:hover:shadow-lg
+              `}
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={disconnectWallet}
+              disabled={isConnecting}
+            >
+              <AlertTriangle size={14} />
+              <span>Wrong Network</span>
+            </button>
+          ) : (
+            // Connected Wallet Button
+            <button
+              className={`
+                flex items-center justify-center gap-2 px-4 py-2.5 min-w-[120px]
+                bg-gradient-to-r from-green-500 to-green-600 
+                hover:from-green-600 hover:to-green-700
+                text-white font-semibold text-sm rounded-lg
+                transition-all duration-300 ease-in-out
+                shadow-lg shadow-green-500/30 hover:shadow-green-500/40
+                hover:-translate-y-0.5 hover:shadow-xl
+                disabled:opacity-70 disabled:cursor-not-allowed
+                disabled:hover:transform-none disabled:hover:shadow-lg
+              `}
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={disconnectWallet}
+              disabled={isConnecting}
+            >
+              <User size={14} />
+              <span>{formatAddress(accounts[0])}</span>
+            </button>
+          )}
+        </>
       ) : (
+        // Connect Wallet Button
         <button
           className={`
             flex items-center justify-center gap-2 px-4 py-2.5 min-w-[120px]
@@ -131,9 +173,16 @@ const Wallet = () => {
       )}
       
       {/* Tooltip for connected state */}
-      {showTooltip && isConnected && (
+      {showTooltip && isConnected && !isWrongNetwork && (
         <div className="absolute top-full right-0 mt-1 px-3 py-2 bg-gray-900/95 text-white text-xs rounded-lg border border-gray-700/50 shadow-xl z-50 whitespace-nowrap">
           Click to disconnect
+        </div>
+      )}
+      
+      {/* Tooltip for wrong network */}
+      {showTooltip && isWrongNetwork && (
+        <div className="absolute top-full right-0 mt-1 px-3 py-2 bg-red-500/95 text-white text-xs rounded-lg border border-red-500/50 shadow-xl z-50 whitespace-nowrap">
+          Switch to {MainAssetName} network
         </div>
       )}
       

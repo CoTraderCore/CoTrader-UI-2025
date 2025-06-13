@@ -5,6 +5,7 @@ import Web3Context from '../../../context/Web3Context';
 import { useDeFi } from '../../../context/DeFiContext';
 import DepositETH from './DepositETH';
 import DepositERC20 from './DepositERC20';
+import { SupportedAssets } from '../../../config';
 
 function Deposit({ address, mainAsset, version, pending }) {
   const { web3, accounts } = useContext(Web3Context);
@@ -153,7 +154,7 @@ function Deposit({ address, mainAsset, version, pending }) {
             <div className={`border-t pt-6 ${
               state.isDarkMode ? 'border-gray-700' : 'border-gray-200'
             }`}>
-              {["BASE", "ETH", "BNB", "MATIC"].includes(mainAsset) ? (
+              {SupportedAssets.includes(mainAsset) ? (
                 <DepositETH
                   mainAsset={mainAsset}
                   address={address}

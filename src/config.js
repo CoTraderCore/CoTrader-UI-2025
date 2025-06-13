@@ -1,9 +1,11 @@
 // switch this to false in production
 const isLocal = false
-
+export const SupportedAssets = ["BASE", "ETH", "BNB", "MATIC"]
 // maximum available for trade tokens in smart fund
 export const MAX_TOKENS = 20
-export const MainAssetName = "BASE" // support ETH, BNB, MATIC, BASE
+
+// update for a certain network
+export const MainAssetName = "MATIC"
 export const NeworkID = 137
 export const SmartFundRegistryADDRESS = '0x992F6c414A6DA6A7470dfB9D61eFc6639e9fbb0E'
 export const EtherscanLink = 'https://polygonscan.com/'
