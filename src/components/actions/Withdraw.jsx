@@ -44,19 +44,23 @@ function Withdraw({ address, mainAsset, version, pending }) {
       const contract = new web3.eth.Contract(contractABI, address);
       const shares = await contract?.methods.balanceOf(accounts[0]).call();
 
+      console.log("shares", shares, address, accounts[0])
+
       if (shares <= 0) {
         setError('Empty deposit - no shares to withdraw');
         setIsLoading(false);
         return;
       }
 
-      const totalPercentage = await contract.methods.TOTAL_PERCENTAGE().call();
+      const totalPercentage = Number(await contract.methods.TOTAL_PERCENTAGE().call());
       const currentPercent = (totalPercentage / 100) * percent;
 
       const block = await web3.eth.getBlockNumber();
 
       let txCount = await axios.get(APIEnpoint + 'api/user-pending-count/' + accounts[0]);
       txCount = txCount.data.result;
+
+      console.log("currentPercent", currentPercent)
 
       const params = version === 6 ? [currentPercent, isConvert] : [currentPercent];
 

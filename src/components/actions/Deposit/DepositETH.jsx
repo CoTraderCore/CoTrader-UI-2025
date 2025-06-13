@@ -64,7 +64,6 @@ function DepositETH({ mainAsset, address, pending, modalClose }) {
     console.log("DepositETH called with address:", address)
     try {
       const fundETH = new web3.eth.Contract(SmartFundABI, address);
-      console.log("depositValue",depositValue)
       const amount = toWei(depositValue.toString(), 'ether');
 
       let txCount = await axios.get(APIEnpoint + 'api/user-pending-count/' + accounts[0]);
