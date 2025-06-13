@@ -1,8 +1,9 @@
-// components/CreateFund.js - Converted to Tailwind CSS with FundDetails styling
-import React, { useState } from 'react';
+// components/CreateFund.js - Fixed wallet connection check
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Info, Plus, Minus, AlertCircle } from 'lucide-react';
 import { useDeFi } from '../../context/DeFiContext';
+import Web3Context from '../../context/Web3Context';
 import { APIEnpoint, SmartFundRegistryABIV9, SmartFundRegistryADDRESS } from '../../config.js';
 import setPending from '../../utils/setPending';
 import axios from 'axios';
@@ -12,6 +13,7 @@ const USD_ADDRESS = '0xe9e7cea3dedca5984780bafc599bd69add087d56';
 
 const CreateFund = () => {
   const navigate = useNavigate();
+  const { web3, accounts } = useContext(Web3Context);
   const { state, dispatch } = useDeFi();
   const [isCreating, setIsCreating] = useState(false);
   const [errors, setErrors] = useState({});
@@ -42,7 +44,7 @@ const CreateFund = () => {
   const createNewFund = async () => {
     if (!validateForm()) return;
     
-    if (!state.web3 || !state.account) {
+    if (!web3 || !accounts || !accounts[0]) {
       alert('Please connect your wallet first');
       return;
     }
@@ -50,9 +52,9 @@ const CreateFund = () => {
     setIsCreating(true);
     
     try {
-      const contract = new state.web3.eth.Contract(SmartFundRegistryABIV9, SmartFundRegistryADDRESS);
+      const contract = new web3.eth.Contract(SmartFundRegistryABIV9, SmartFundRegistryADDRESS);
       const percentMultiplier = 100;
-      const block = await state.web3.eth.getBlockNumber();
+      const block = await web3.eth.getBlockNumber();
       const coreAsset = formData.fundAsset === 'BASE' ? ETH_ADDRESS : USD_ADDRESS;
 
       console.log('Creating fund:', {
@@ -64,7 +66,7 @@ const CreateFund = () => {
       });
 
       // Get current tx count
-      let txCount = await axios.get(APIEnpoint + 'api/user-pending-count/' + state.account);
+      let txCount = await axios.get(APIEnpoint + 'api/user-pending-count/' + accounts[0]);
       txCount = txCount.data.result;
 
       // Create fund
@@ -76,12 +78,12 @@ const CreateFund = () => {
           formData.tradeVerification
         )
         .send({ 
-          from: state.account, 
-          gasPrice: await state.web3.eth.getGasPrice() 
+          from: accounts[0], 
+          gasPrice: await web3.eth.getGasPrice() 
         })
         .on('transactionHash', (hash) => {
           // Pending status for DB
-          setPending(null, 1, state.account, block, hash, 'SmartFundCreated');
+          setPending(null, 1, accounts[0], block, hash, 'SmartFundCreated');
           dispatch({ type: 'SET_PENDING_TRANSACTIONS', payload: { status: true, count: txCount + 1 } });
         });
 
@@ -351,19 +353,25 @@ const CreateFund = () => {
                 <span className={`text-sm ${
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
                 }`}>Name:</span>
-                <span className="font-medium">{formData.fundName || 'Not set'}</span>
+                <span className={`font-medium ${
+                  state.isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{formData.fundName || 'Not set'}</span>
               </div>
               <div className="flex justify-between">
                 <span className={`text-sm ${
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
                 }`}>Performance Fee:</span>
-                <span className="font-medium">{formData.percent}%</span>
+                <span className={`font-medium ${
+                  state.isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{formData.percent}%</span>
               </div>
               <div className="flex justify-between">
                 <span className={`text-sm ${
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
                 }`}>Main Asset:</span>
-                <span className="font-medium">{formData.fundAsset}</span>
+                <span className={`font-medium ${
+                  state.isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{formData.fundAsset}</span>
               </div>
               <div className="flex justify-between">
                 <span className={`text-sm ${
@@ -385,7 +393,7 @@ const CreateFund = () => {
             state.isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
             <div className="space-y-3">
-              {!state.web3 || !state.account ? (
+              {!web3 ? (
                 <div className={`p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/10`}>
                   <p className="text-yellow-500 text-sm">
                     Please connect your wallet to create a fund
@@ -395,15 +403,18 @@ const CreateFund = () => {
                 <button
                   onClick={createNewFund}
                   disabled={isCreating}
-                  className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
+                  className={`w-full px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl ${
                     isCreating
                       ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
                   } text-white`}
                 >
                   {isCreating ? (
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <svg className="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
                       <span>Creating Fund...</span>
                     </div>
                   ) : (

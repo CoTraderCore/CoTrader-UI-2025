@@ -116,7 +116,7 @@ function DepositERC20({ mainAsset, address, pending, modalClose }) {
       const ercAssetDecimals = await ercAssetContract.methods.decimals().call();
       const userWalletBalance = await ercAssetContract.methods.balanceOf(accounts[0]).call();
       const userBalanceFromWei = fromWeiByDecimalsInput(ercAssetDecimals, userWalletBalance);
-
+      
       if (parseFloat(depositValue) > parseFloat(userBalanceFromWei)) {
         setValueError(`Not enough ${symbol}`);
         setIsLoading(false);
