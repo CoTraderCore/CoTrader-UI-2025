@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { ArrowUpRight, Filter, ChevronDown, Search, X, Settings, Calendar, DollarSign, User, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
 import SmartFundCard from './SmartFundCard';
+import { MainAssetName } from '../config'
 
 const SmartFundList = () => {
   const { state } = useDeFi();
@@ -64,7 +65,7 @@ const SmartFundList = () => {
 
     // Calculate total TVL
     const totalTVL = state.smartFunds.reduce((sum, fund) => {
-      const value = parseFloat(fund.valueInUSD) || 0;
+      const value = parseFloat(fund.historyProfitInUSD) || 0;
       return sum + value;
     }, 0);
 
@@ -91,7 +92,7 @@ const SmartFundList = () => {
     return [
       { 
         label: 'Total TVL', 
-        value: formatTVL(totalTVL), 
+        value: formatTVL(totalTVL), // for TLV we use history, but in production should be current
         change: '+12.5%', 
         color: 'text-green-500' 
       },
@@ -103,7 +104,7 @@ const SmartFundList = () => {
       },
       { 
         label: 'Total Users', 
-        value: totalUsers.toLocaleString(), 
+        value: String(state.smartFunds.length * 3), // mock total users
         change: '+89', 
         color: 'text-purple-500' 
       },
@@ -473,9 +474,9 @@ const SmartFundList = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Smart Funds</h1>
+          <h1 className="text-3xl font-bold mb-2">Smart Funds {MainAssetName}</h1>
           <p className={`${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Discover and invest in automated DeFi strategies
+            Pioneers in the DEFI world since 2017
           </p>
         </div>
       </div>

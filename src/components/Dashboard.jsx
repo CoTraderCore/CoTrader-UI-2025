@@ -161,7 +161,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold mb-2">Smart Funds</h1>
           <p className={`${state.isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Discover and invest in automated DeFi strategies
+            Pioneers in the DEFI world since 2017
           </p>
         </div>
       </div>
