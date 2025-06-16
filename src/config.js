@@ -4,16 +4,27 @@ export const SupportedAssets = ["BASE", "ETH", "BNB", "MATIC"]
 // maximum available for trade tokens in smart fund
 export const MAX_TOKENS = 20
 
-// BASE network
+// BNB network
 export const UNI_V2_DEX_TYPE = 4
-export const MainAssetName = "MATIC"
-export const NeworkID = 137
-export const SmartFundRegistryADDRESS = '0x992F6c414A6DA6A7470dfB9D61eFc6639e9fbb0E'
-export const EtherscanLink = 'https://polygonscan.com/'
-export const APIEnpoint = !isLocal ? 'https://api-polygon.cotrader.com/' : 'http://localhost:9888/'
-export const WETH = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270'
-export const UniV2Router = '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff'
-export const USD_ADDRESS = "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063" // DAI
+export const MainAssetName = "BNB"
+export const NeworkID = 56
+export const SmartFundRegistryADDRESS = '0x759563F3A0f51A202e504BE5Ea3DeF0D3b4e6933'
+export const EtherscanLink = 'https://bscscan.com/'
+export const APIEnpoint = !isLocal ? 'https://api-bsc.cotrader.com/' : 'http://localhost:9888/'
+export const WETH = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+export const UniV2Router = '0x10ED43C718714eb63d5aA57B78B54704E256024E'
+export const USD_ADDRESS = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56" // DAI
+
+// // BASE network
+// export const UNI_V2_DEX_TYPE = 4
+// export const MainAssetName = "BASE"
+// export const NeworkID = 8453
+// export const SmartFundRegistryADDRESS = '0xEEce063BB21E231B2b9981Ca254B19b651aDb021'
+// export const EtherscanLink = 'https://basescan.org/'
+// export const APIEnpoint = !isLocal ? 'https://api-base.cotrader.com/' : 'http://localhost:9888/'
+// export const WETH = '0x4200000000000000000000000000000000000006'
+// export const UniV2Router = '0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24'
+// export const USD_ADDRESS = "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb" // DAI
 
 // // MATIC network
 // export const UNI_V2_DEX_TYPE = 4

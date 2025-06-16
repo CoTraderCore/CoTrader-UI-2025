@@ -1,5 +1,5 @@
 
-const maticTokens = [
+const baseTokens = [
   {
     "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     "circulating_market_cap": "35448997281.6572",
@@ -652,5 +652,5 @@ const maticTokens = [
   }
 ]
 
-export default maticTokens
+export default baseTokens
   
