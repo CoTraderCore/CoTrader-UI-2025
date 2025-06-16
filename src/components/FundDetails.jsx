@@ -4,8 +4,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Copy, Check, TrendingUp, Scissors } from 'lucide-react';
 import { useDeFi } from '../context/DeFiContext';
 import Deposit from './actions/Deposit/Deposit';
+import { MainAssetName } from '../config';
 import Withdraw from './actions/Withdraw';
+
 import Trade from './actions/Trade';
+
 import TakeCut from './actions/TakeCut';
 
 const FundDetails = () => {
@@ -255,7 +258,7 @@ const FundDetails = () => {
                 <p className={`text-sm mb-1 ${
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
                 }`}>Main Asset</p>
-                <p>{fund.mainAsset || 'MATIC'}</p>
+                <p>{fund.mainAsset || MainAssetName}</p>
               </div>
             </div>
           </div>
@@ -295,8 +298,8 @@ const FundDetails = () => {
               <div>
                 <p className={`text-sm mb-1 ${
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                }`}>Value in MATIC</p>
-                <p className="text-lg font-bold">{fund.valueInETH || '0'} MATIC</p>
+                }`}>Value in {MainAssetName}</p>
+                <p className="text-lg font-bold">{fund.valueInETH || '0'} {MainAssetName}</p>
               </div>
               <div>
                 <p className={`text-sm mb-1 ${
@@ -307,9 +310,9 @@ const FundDetails = () => {
               <div>
                 <p className={`text-sm mb-1 ${
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                }`}>Profit in MATIC</p>
+                }`}>Profit in {MainAssetName}</p>
                 <p className={`text-lg font-bold ${parseFloat(fund.profitInETH || '0') >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {fund.profitInETH || '0'} MATIC
+                  {fund.profitInETH > 0 ? fund.profitInETH : 0} {MainAssetName}
                 </p>
               </div>
               <div>
@@ -317,7 +320,7 @@ const FundDetails = () => {
                   state.isDarkMode ? 'text-gray-400' : 'text-gray-600'
                 }`}>Profit in USD</p>
                 <p className={`text-lg font-bold ${parseFloat(fund.profitInUSD || '0') >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  ${fund.profitInUSD || '0'}
+                  ${fund.profitInUSD > 0 ? fund.profitInUSD : '0'}
                 </p>
               </div>
             </div>
@@ -369,13 +372,13 @@ const FundDetails = () => {
             <div className="space-y-3">
               <Deposit 
                 address={fund.address}
-                mainAsset={fund.mainAsset || 'MATIC'}
+                mainAsset={fund.mainAsset || MainAssetName}
                 version={fund.version || 1}
                 pending={pendingHandler}
               />
               <Withdraw
                 address={fund.address}
-                mainAsset={fund.mainAsset || 'MATIC'}
+                mainAsset={fund.mainAsset || MainAssetName}
                 version={fund.version || 1}
                 pending={pendingHandler}
               />
@@ -391,13 +394,13 @@ const FundDetails = () => {
               <div className="space-y-3">
                 <Trade 
                   address={fund.address}
-                  mainAsset={fund.mainAsset || 'MATIC'}
+                  mainAsset={fund.mainAsset || MainAssetName}
                   version={fund.version || 1}
                   pending={pendingHandler}
                 />
                 <TakeCut
                   address={fund.address}
-                  mainAsset={fund.mainAsset || 'MATIC'}
+                  mainAsset={fund.mainAsset || MainAssetName}
                   version={fund.version || 1}
                   pending={pendingHandler}
                 />
