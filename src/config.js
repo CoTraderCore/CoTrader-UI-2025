@@ -1,5 +1,5 @@
 // switch this to false in production
-const isLocal = false
+const isLocal = true
 export const SupportedAssets = ["BASE", "ETH", "BNB", "MATIC"]
 // maximum available for trade tokens in smart fund
 export const MAX_TOKENS = 20
@@ -10,7 +10,7 @@ export const MainAssetName = "MATIC"
 export const NeworkID = 137
 export const SmartFundRegistryADDRESS = '0x992F6c414A6DA6A7470dfB9D61eFc6639e9fbb0E'
 export const EtherscanLink = 'https://polygonscan.com/'
-export const APIEnpoint = !isLocal ? 'https://api-polygon.cotrader.com/' : 'http://localhost:9008/'
+export const APIEnpoint = !isLocal ? 'https://api-polygon.cotrader.com/' : 'http://localhost:9888/'
 export const WETH = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270'
 export const UniV2Router = '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff'
 export const USD_ADDRESS = "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063" // DAI

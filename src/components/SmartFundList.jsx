@@ -338,21 +338,13 @@ const SmartFundList = () => {
   // Memoized filtered and sorted funds
   const filteredAndSortedFunds = useMemo(() => {
     if (!state.smartFunds || state.smartFunds.length === 0) return [];
-    
-    console.log('Processing funds:', state.smartFunds.length, 'Sort by:', sortBy);
-    
     // First apply advanced filters
     let filteredFunds = applyAdvancedFilters(state.smartFunds, advancedFilters);
-    console.log('After advanced filters:', filteredFunds.length);
-    
     // Then filter by search query
     filteredFunds = filterFundsBySearch(filteredFunds, searchQuery);
-    console.log('After search filter:', filteredFunds.length);
-    
     // Finally sort the filtered results
     const sortedFunds = sortFunds(filteredFunds, sortBy);
-    console.log('After sorting:', sortedFunds.length, 'First fund value:', sortedFunds[0]?.valueInUSD || sortedFunds[0]?.tvl);
-    
+
     return sortedFunds;
   }, [state.smartFunds, sortBy, searchQuery, advancedFilters]);
 
