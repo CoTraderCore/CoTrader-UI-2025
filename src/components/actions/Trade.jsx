@@ -19,6 +19,7 @@ import { useDeFi } from '../../context/DeFiContext';
 import { toWeiByDecimalsInput, fromWeiByDecimalsInput } from '../../utils/weiByDecimals';
 import tokensList from '../../storage/tokens/tokensList';
 import BigNumber from 'bignumber.js';
+import getMerkleTreeData from '../../utils/getMerkleTreeData'
 
 function Trade({ address, mainAsset, version, pending }) {
   const { web3, accounts } = useContext(Web3Context);
@@ -600,16 +601,17 @@ function Trade({ address, mainAsset, version, pending }) {
 
       modalClose();
 
+      const { proof, positions } = getMerkleTreeData(toTokenData.address)
+
       // Execute trade
-      // SHOULD BE ALSO FOR TRADE VERIFIACTION TRUE
       smartFund.methods
         .trade(
           fromTokenData.address,
           amountInWei,
           toTokenData.address,
           UNI_V2_DEX_TYPE, // exchange type dependse on network
-          [], // proof (empty for now)
-          [], // positions (empty for now)
+          proof, 
+          positions, 
           "0x", // additional data
           minReturn
         )
